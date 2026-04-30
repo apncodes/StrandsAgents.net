@@ -4,6 +4,7 @@
 > Model-driven agentic AI for C# developers, built on the same principles as [AWS Strands Agents](https://strandsagents.com).
 
 [![NuGet](https://img.shields.io/nuget/v/Strands.Core?label=NuGet&color=blue)](https://www.nuget.org/packages/Strands.Core)
+[![CI](https://github.com/apncodes/strands.net/actions/workflows/ci.yml/badge.svg)](https://github.com/apncodes/strands.net/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 ---
@@ -16,27 +17,106 @@ dotnet add package Strands.Models.Bedrock
 dotnet add package Strands.Tools
 ```
 
+Decorate a method with `[Tool]` — the Roslyn source generator emits a compile-time `ITool` wrapper at build time:
+
 ```csharp
 using Strands.Core;
+using Strands.Core.Tools;
 using Strands.Models.Bedrock;
+using Strands.Tools;
 
+// 1. Define a tool using the [Tool] attribute
+public class MyTools
+{
+    [Tool("get_weather", "Returns the current weather for a city")]
+    public string GetWeather(string city) => $"Sunny, 22°C in {city}";
+}
+
+// 2. Wire up the agent — the source generator produces MyTools_GetWeather_Tool
 var agent = new Agent(
     model: new BedrockModel("us-east-1"),
     systemPrompt: "You are a helpful assistant.",
-    tools: [new CalculatorTool_Calculate_Tool(new CalculatorTool())]
+    tools: [new MyTools_GetWeather_Tool(new MyTools())]
 );
 
-var result = await agent.InvokeAsync("What is 42 multiplied by 1764?");
-Console.WriteLine(result.Message); // The answer is 74,088
+var result = await agent.InvokeAsync("What's the weather in London?");
+Console.WriteLine(result.Message);
 ```
+
+> The `MyTools_GetWeather_Tool` class is generated at compile time by `Strands.SourceGenerator`. Add it to your project with `dotnet add package Strands.SourceGenerator`.
 
 Prerequisites: .NET 10 SDK, AWS credentials with Bedrock access enabled.
 
 ---
 
+## Model providers
+
+Three providers are included out of the box — swap in one line:
+
+```csharp
+// Amazon Bedrock (cross-region inference profile)
+var model = new BedrockModel(region: "us-east-1",
+    modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0");
+
+// Anthropic direct API
+var model = new AnthropicModel(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-5");
+
+// OpenAI / Azure OpenAI / Ollama / any OpenAI-compatible endpoint
+var model = new OpenAICompatibleModel(
+    baseUrl: "https://api.openai.com/v1",
+    apiKey: "sk-...",
+    modelId: "gpt-4o");
+```
+
+---
+
+## Streaming
+
+```csharp
+await foreach (var evt in agent.StreamAsync("Explain async/await in C#"))
+{
+    if (evt is TextDeltaEvent delta)
+        Console.Write(delta.Delta);
+}
+```
+
+---
+
+## Structured output
+
+```csharp
+record WeatherReport(string City, int TempC, string Condition);
+
+var report = await agent.GetStructuredOutputAsync<WeatherReport>(
+    "What is the weather in Paris right now?");
+
+Console.WriteLine($"{report.City}: {report.TempC}°C, {report.Condition}");
+```
+
+---
+
+## DI integration (ASP.NET Core / Worker Service)
+
+```bash
+dotnet add package Strands.Extensions.DI
+```
+
+```csharp
+builder.Services
+    .AddBedrockModel(region: "us-east-1")
+    .AddHttpRequestTool()
+    .AddStrandsInMemorySessionManager()
+    .AddStrandsAgent();
+
+// Resolve IAgent from the container
+var agent = app.Services.GetRequiredService<IAgent>();
+```
+
+---
+
 ## Why Strands.NET
 
-.NET is the dominant runtime in enterprise — Azure, AWS Lambda, Windows services, ASP.NET APIs. Until now, the Strands agentic framework was Python-only. This project brings the same model-driven loop, tool system, and multi-agent patterns to every .NET developer without requiring them to learn a new language or host a Python sidecar. The API is idiomatic C# 13 throughout: generics instead of string tags, `IAsyncEnumerable` instead of async generators, `Task.WhenAll` instead of `asyncio.gather`.
+.NET is the dominant runtime in enterprise — AWS Lambda, Windows services, ASP.NET APIs, and beyond. Strands Agents .NET brings the model-driven agentic approach to every .NET developer: the same event loop, tool system, and multi-agent patterns, built ground-up in idiomatic C# 13. No language bridges, no sidecars. The API uses the patterns .NET developers already know: generics instead of string tags, `IAsyncEnumerable` instead of async generators, `Task.WhenAll` for parallel execution.
 
 ---
 
@@ -51,12 +131,11 @@ Prerequisites: .NET 10 SDK, AWS credentials with Bedrock access enabled.
 - **Session management** — `InMemorySessionManager` or `FileSessionManager`; bring your own via `ISessionManager`
 - **Context window trimming** — `SlidingWindowStrategy` or `SummarizingConversationManager` for long-running agents
 - **OpenTelemetry** — `ActivitySource` named `"Strands.Agent"` emits traces and metrics with zero config
-- **DI integration** — `AddBedrockModel()`, `AddStrandsAgent()` for native ASP.NET Core / Worker Service wiring
+- **DI integration** — `AddBedrockModel()`, `AddAnthropicModel()`, `AddOpenAICompatibleModel()`, `AddStrandsAgent()` for native ASP.NET Core / Worker Service wiring
 - **Multi-agent graph** — `GraphBuilder` with conditional routing; `PipelineOrchestrator`; `ParallelOrchestrator`
 - **Agent as tool** — wrap any `IAgent` as an `ITool` with `agent.AsTool()` for hierarchical orchestration
 - **MCP** — connect any Model Context Protocol server (stdio or SSE) via `McpToolProvider`
 - **A2A protocol** — expose agents over HTTP with `MapA2AEndpoint`; call remote agents with `A2AAgent` (cross-framework, cross-language)
-- **Provider-agnostic** — swap `BedrockModel` for `AnthropicModel` or `OpenAICompatibleModel` in one line
 - **AgentCore Runtime** *(optional)* — `MapAgentCoreEndpoints()` deploys any agent to Amazon Bedrock AgentCore Runtime in one line; managed Memory, Browser, and Code Interpreter tools available via `Strands.AgentCore`
 
 ---
@@ -65,18 +144,18 @@ Prerequisites: .NET 10 SDK, AWS credentials with Bedrock access enabled.
 
 These aren't translations — they're the patterns .NET developers already know, applied to agentic AI.
 
-| Capability | Strands Python | Strands Agents .NET |
-|---|---|---|
-| Type safety | Runtime type hints | Compile-time generics |
-| Streaming | `async_generator` | `IAsyncEnumerable<T>` |
-| Hook registration | String event names | `Register<TEvent>` — compiler-checked |
-| Tool schema | `inspect.signature()` at runtime | Roslyn source generator at compile time |
-| Parallel execution | `asyncio.gather` | `Task.WhenAll` |
-| DI integration | Manual wiring | `AddBedrockModel()` + `AddStrandsAgent()` |
-| Enterprise hosting | WSGI / ASGI | `IHostedService` / Lambda / Azure Functions |
-| MCP | ✓ | ✓ |
-| A2A protocol | ✓ | ✓ (interoperable with Python agents) |
-| Graph orchestration | ✓ | ✓ with parallel-node support |
+| Capability | Strands Agents .NET |
+|---|---|
+| Type safety | Compile-time generics |
+| Streaming | `IAsyncEnumerable<T>` |
+| Hook registration | `Register<TEvent>` — compiler-checked |
+| Tool schema | Roslyn source generator at compile time |
+| Parallel execution | `Task.WhenAll` |
+| DI integration | `AddBedrockModel()` + `AddStrandsAgent()` |
+| Enterprise hosting | `IHostedService` / AWS Lambda / any host |
+| MCP | ✓ |
+| A2A protocol | ✓ (interoperable across languages and frameworks) |
+| Graph orchestration | ✓ with parallel-node support |
 
 ---
 
@@ -127,19 +206,29 @@ dotnet add package Strands.AgentCore
 ```
 
 ```csharp
-// Your agent — exactly as you configured it
 builder.Services
     .AddBedrockModel("us-east-1")
-    .AddStrandsAgent("You are a helpful assistant.");
+    .AddStrandsAgent();
 
-// One line makes it deployable to AgentCore Runtime
 var app = builder.Build();
 app.MapAgentCoreEndpoints();  // POST /invocations + GET /health
 app.UseAgentCorePort(8080);   // AgentCore Runtime expects port 8080
 app.Run();
 ```
 
-Python equivalent: `BedrockAgentCoreApp()` + `@app.entrypoint` + `app.run()`
+---
+
+## Packages
+
+| Package | Description |
+|---|---|
+| `Strands.Core` | Agent, event loop, tool system, hooks, session management |
+| `Strands.Models.Bedrock` | Amazon Bedrock model provider (Converse API) |
+| `Strands.Tools` | Built-in tools: calculator, file read/write, HTTP request |
+| `Strands.SourceGenerator` | Roslyn source generator — emits `ITool` wrappers from `[Tool]` attributes |
+| `Strands.Extensions.DI` | ASP.NET Core / Worker Service DI extensions |
+| `Strands.MultiAgent` | Pipeline, parallel, and graph orchestration; A2A protocol |
+| `Strands.AgentCore` | Amazon Bedrock AgentCore Runtime hosting |
 
 ---
 
@@ -149,6 +238,7 @@ Python equivalent: `BedrockAgentCoreApp()` + `@app.entrypoint` + `app.run()`
 |---|---|
 | [CliAgent](samples/CliAgent/) | Multi-turn streaming REPL — the minimal working agent |
 | [AspNetAgent](samples/AspNetAgent/) | `/chat` endpoint with session continuity and SSE streaming |
+| [DiAgent](samples/DiAgent/) | Full DI wiring with file tools and session management |
 | [MultiAgentPipeline](samples/MultiAgentPipeline/) | Sequential pipeline + parallel fan-out with timestamps |
 | [OrchestratedResearch](samples/OrchestratedResearch/) | All three orchestration patterns side by side |
 | [SupportTriage](samples/SupportTriage/) | Graph routing, hooks, and structured output extraction |
@@ -162,9 +252,15 @@ Python equivalent: `BedrockAgentCoreApp()` + `@app.entrypoint` + `app.run()`
 
 ---
 
-## Relationship to AWS Strands
+## About Strands Agents
 
-Strands Agents .NET implements the same model-driven agentic architecture as [AWS Strands Agents](https://strandsagents.com), which is open source under Apache 2.0. The core concepts — event loop, tool system, hooks, multi-agent orchestration — are shared; the implementation is native C# 13 throughout. This project is not affiliated with or endorsed by AWS, but is fully compatible with the Strands ecosystem including the A2A protocol for cross-language agent communication.
+Strands Agents is an open source SDK that takes a model-driven approach to building AI agents — the model drives its own behavior, decides which tools to call, and loops until the task is complete. This approach emerged from real-world production experience building agents at AWS.
+
+Strands Agents .NET is a ground-up implementation of those design principles for the .NET ecosystem. It is not a port or wrapper — it is built natively in C# 13, using the patterns and idioms .NET developers already know. The core concepts (event loop, tool system, hooks, multi-agent orchestration) follow the Strands design, and the A2A protocol implementation is interoperable across languages and frameworks.
+
+Learn more about the Strands Agents design principles at [strandsagents.com](https://strandsagents.com).
+
+This project is not affiliated with or endorsed by AWS.
 
 ---
 
