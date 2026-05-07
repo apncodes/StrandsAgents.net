@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Strands.AgentCore\Strands.AgentCore.csproj" />
+    <ProjectReference Include="..\..\src\Strands.Core\Strands.Core.csproj" />
+    <ProjectReference Include="..\..\src\Strands.Extensions.DI\Strands.Extensions.DI.csproj" />
+    <ProjectReference Include="..\..\src\Strands.Models.Bedrock\Strands.Models.Bedrock.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -11,3 +11,7 @@ public record StdioTransportOptions(string Command, string[] Args) : McpTranspor
 /// <summary>Transport options for connecting to a remote MCP server over Server-Sent Events.</summary>
 /// <param name="Endpoint">The SSE endpoint URI of the MCP server.</param>
 public record SseTransportOptions(Uri Endpoint) : McpTransportOptions;
+
+/// <summary>Transport options for connecting to an Amazon Bedrock AgentCore Gateway over Streamable HTTP.</summary>
+/// <param name="GatewayUrl">The AgentCore Gateway MCP endpoint URL.</param>
+public record AgentCoreGatewayTransportOptions(Uri GatewayUrl) : McpTransportOptions;

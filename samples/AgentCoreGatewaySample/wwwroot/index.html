@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Booking Assistant</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="shell">
+
+    <header>
+      <div class="header-brand">
+        <span class="header-icon">✈️</span>
+        <div>
+          <div class="header-title">Travel Booking Assistant</div>
+          <div class="header-sub">Flights &amp; hotels via AgentCore Gateway · Amazon Bedrock</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">✈️</div>
+        <h2>Where would you like to go?</h2>
+        <p>I can search for flights and hotels. Tell me your destination and dates.</p>
+        <div class="chips">
+          <button class="chip" onclick="setInput('Find flights from New York to London next Friday, returning Sunday')">✈️ NYC → London, next weekend</button>
+          <button class="chip" onclick="setInput('Search for hotels in Paris for 3 nights starting June 15th')">🏨 Hotels in Paris, June 15–18</button>
+          <button class="chip" onclick="setInput('I need to fly from San Francisco to Tokyo in July and stay for a week')">🗾 SF → Tokyo, one week in July</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="input" placeholder="Ask about flights, hotels, or your travel plans…" rows="1" onkeydown="handleKey(event)"></textarea>
+      <button id="send-btn" onclick="sendMessage()">↑</button>
+    </div>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

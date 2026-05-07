@@ -9,6 +9,53 @@ namespace Strands.AgentCore.Tests;
 
 public sealed class DiTests
 {
+    // ── AddAgentCoreGatewayTools ─────────────────────────────────────────────
+    // Note: AddAgentCoreGatewayTools connects to the gateway eagerly at registration time
+    // (MCP handshake + tools/list) so that each tool can be registered as ITool.
+    // Tests that require a real gateway are marked Skip and run as integration tests.
+
+    [Fact]
+    public void AddAgentCoreGatewayTools_NullGatewayUrl_ThrowsArgumentNullException()
+    {
+        var services = new ServiceCollection();
+        Assert.Throws<ArgumentNullException>(() =>
+            services.AddAgentCoreGatewayTools(null!, new AgentCoreGatewayAuth.None()));
+    }
+
+    [Fact]
+    public void AddAgentCoreGatewayTools_NullAuth_ThrowsArgumentNullException()
+    {
+        var services = new ServiceCollection();
+        Assert.Throws<ArgumentNullException>(() =>
+            services.AddAgentCoreGatewayTools(
+                new Uri("https://gateway.example.com/mcp"), null!));
+    }
+
+    [Fact(Skip = "Requires a real AgentCore Gateway — run as integration test with AGENTCORE_GATEWAY_URL set")]
+    public void AddAgentCoreGatewayTools_NoneAuth_RegistersToolsAndProvider()
+    {
+        var gatewayUrl = new Uri(
+            Environment.GetEnvironmentVariable("AGENTCORE_GATEWAY_URL")
+            ?? "https://gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp");
+
+        var services = new ServiceCollection();
+        services.AddAgentCoreGatewayTools(gatewayUrl, new AgentCoreGatewayAuth.None());
+
+        // Provider registered as singleton
+        var providerDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(AgentCoreGatewayToolProvider));
+        Assert.NotNull(providerDescriptor);
+        Assert.Equal(ServiceLifetime.Singleton, providerDescriptor.Lifetime);
+
+        // At least one ITool registered (gateway has tools)
+        var toolDescriptors = services.Where(d => d.ServiceType == typeof(ITool)).ToList();
+        Assert.NotEmpty(toolDescriptors);
+
+        // Returns IServiceCollection for chaining
+        var result = services.AddAgentCoreGatewayTools(gatewayUrl, new AgentCoreGatewayAuth.None());
+        Assert.Same(services, result);
+    }
+
+
     [Fact]
     public void AddAgentCoreSessionManager_RegistersISessionManager()
     {

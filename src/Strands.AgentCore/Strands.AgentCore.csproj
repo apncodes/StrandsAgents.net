@@ -16,11 +16,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Strands.Core" Version="0.1.0-preview.1" />
+    <ProjectReference Include="..\Strands.Core\Strands.Core.csproj" />
+    <ProjectReference Include="..\Strands.Tools\Strands.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Strands.AgentCore.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

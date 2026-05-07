@@ -109,4 +109,47 @@ public static class AgentCoreServiceCollectionExtensions
         services.AddSingleton<ITool>(_ => new AgentCoreCodeInterpreterTool(region));
         return services;
     }
+
+    /// <summary>
+    /// Registers the tools exposed by an Amazon Bedrock AgentCore Gateway as <see cref="ITool"/>
+    /// singletons in the DI container.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="gatewayUrl">The AgentCore Gateway MCP endpoint URL.</param>
+    /// <param name="auth">
+    /// The inbound authorization mode. Use <see cref="AgentCoreGatewayAuth.Bearer"/> for JWT/OIDC,
+    /// <see cref="AgentCoreGatewayAuth.Iam"/> for SigV4, or <see cref="AgentCoreGatewayAuth.None"/>
+    /// for network-isolated environments.
+    /// </param>
+    /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    public static IServiceCollection AddAgentCoreGatewayTools(
+        this IServiceCollection services,
+        Uri gatewayUrl,
+        AgentCoreGatewayAuth auth)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(gatewayUrl);
+        ArgumentNullException.ThrowIfNull(auth);
+
+        // Connect to the gateway and discover tools eagerly at registration time.
+        // This performs the MCP handshake (tools/list) once so each tool can be
+        // registered individually as ITool — the pattern AddStrandsAgent expects.
+        var provider = AgentCoreGatewayToolProvider.CreateAsync(gatewayUrl, auth)
+            .GetAwaiter().GetResult();
+
+        var tools = provider.ListToolsAsync().GetAwaiter().GetResult();
+
+        // Register the provider as a singleton for direct resolution if needed.
+        services.AddSingleton(provider);
+
+        // Register each discovered tool as ITool so AddStrandsAgent picks them all up
+        // via IEnumerable<ITool> — same pattern as AddAgentCoreBrowser, AddStrandsTool, etc.
+        foreach (var tool in tools)
+        {
+            var captured = tool;
+            services.AddSingleton<ITool>(_ => captured);
+        }
+
+        return services;
+    }
 }

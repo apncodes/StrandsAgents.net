@@ -77,6 +77,46 @@ public sealed class McpToolProvider : IAsyncDisposable
     }
 
     /// <summary>
+    /// Creates an <see cref="McpToolProvider"/> by connecting to a remote server
+    /// over Streamable HTTP using a pre-configured <see cref="HttpClient"/>.
+    /// </summary>
+    /// <remarks>
+    /// The <paramref name="httpClient"/> is owned by the returned provider and will be
+    /// disposed when the provider is disposed. Use this overload when you need to supply
+    /// a custom <see cref="HttpClient"/> — for example, one that carries authentication
+    /// headers or a signing <see cref="System.Net.Http.DelegatingHandler"/>.
+    /// </remarks>
+    /// <param name="httpClient">
+    /// A pre-configured <see cref="HttpClient"/>. Ownership is transferred to the provider.
+    /// </param>
+    /// <param name="endpoint">The Streamable HTTP endpoint URI of the MCP server.</param>
+    /// <param name="ct">Cancellation token for the connection handshake.</param>
+    /// <returns>A connected and initialized <see cref="McpToolProvider"/>.</returns>
+    public static async Task<McpToolProvider> CreateForHttpClientAsync(
+        HttpClient httpClient,
+        Uri endpoint,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(endpoint);
+
+        var transport = new SseClientTransport(
+            new SseClientTransportOptions
+            {
+                Endpoint = endpoint,
+                TransportMode = HttpTransportMode.StreamableHttp
+            },
+            httpClient,
+            loggerFactory: null,
+            ownsHttpClient: true);
+
+        var client = await McpClientFactory.CreateAsync(transport, cancellationToken: ct)
+            .ConfigureAwait(false);
+
+        return new McpToolProvider(client);
+    }
+
+    /// <summary>
     /// Lists all tools exposed by the connected MCP server, wrapping each as an <see cref="ITool"/>.
     /// Results are cached after the first call.
     /// </summary>
