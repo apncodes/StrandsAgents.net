@@ -22,18 +22,10 @@ Decorate a method with `[Tool]` — the Roslyn source generator emits a compile-
 
 ```csharp
 using Strands.Core;
-using Strands.Core.Tools;
 using Strands.Models.Bedrock;
-using Strands.Tools;
+using MyApp;
 
-// 1. Define a tool using the [Tool] attribute
-public class MyTools
-{
-    [Tool("get_weather", "Returns the current weather for a city")]
-    public string GetWeather(string city) => $"Sunny, 22°C in {city}";
-}
-
-// 2. Wire up the agent — the source generator produces MyTools_GetWeather_Tool
+// Wire up the agent — the source generator produces MyTools_GetWeather_Tool
 var agent = new Agent(
     model: new BedrockModel("us-east-1"),
     systemPrompt: "You are a helpful assistant.",
@@ -42,6 +34,17 @@ var agent = new Agent(
 
 var result = await agent.InvokeAsync("What's the weather in London?");
 Console.WriteLine(result.Message);
+
+// Define a tool using the [Tool] attribute
+// Note: the class must be in a named namespace so the generated wrapper resolves correctly
+namespace MyApp
+{
+    public class MyTools
+    {
+        [Tool("Returns the current weather for a city")]
+        public string GetWeather(string city) => $"Sunny, 22°C in {city}";
+    }
+}
 ```
 
 > Prerequisites: .NET 10 SDK, AWS credentials with Bedrock access enabled.
