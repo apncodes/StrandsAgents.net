@@ -25,7 +25,7 @@ using Strands.Core;
 using Strands.Models.Bedrock;
 using MyApp;
 
-// Wire up the agent — the source generator produces MyTools_GetWeather_Tool
+// Wire up the agent — MyTools_GetWeather_Tool is generated at compile time
 var agent = new Agent(
     model: new BedrockModel("us-east-1"),
     systemPrompt: "You are a helpful assistant.",
@@ -36,7 +36,6 @@ var result = await agent.InvokeAsync("What's the weather in London?");
 Console.WriteLine(result.Message);
 
 // Define a tool using the [Tool] attribute
-// Note: the class must be in a named namespace so the generated wrapper resolves correctly
 namespace MyApp
 {
     public class MyTools
@@ -87,12 +86,17 @@ await foreach (var evt in agent.StreamAsync("Explain async/await in C#"))
 ## Structured output
 
 ```csharp
-record WeatherReport(string City, int TempC, string Condition);
+using MyApp;
 
 var report = await agent.GetStructuredOutputAsync<WeatherReport>(
     "What is the weather in Paris right now?");
 
 Console.WriteLine($"{report.City}: {report.TempC}°C, {report.Condition}");
+
+namespace MyApp
+{
+    record WeatherReport(string City, int TempC, string Condition);
+}
 ```
 
 ---
