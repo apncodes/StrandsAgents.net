@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\StrandsAgents.Runtime\StrandsAgents.Runtime.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Core\StrandsAgents.Core.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Extensions.DI\StrandsAgents.Extensions.DI.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Models.Bedrock\StrandsAgents.Models.Bedrock.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Tools\StrandsAgents.Tools.csproj" />
+    <PackageReference Include="StrandsAgents.Runtime" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.Core" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.Extensions.DI" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.Models.Bedrock" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.Tools" Version="0.1.4" />
   </ItemGroup>
 
 </Project>

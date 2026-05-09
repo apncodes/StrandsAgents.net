@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\StrandsAgents.Core\StrandsAgents.Core.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Models.Bedrock\StrandsAgents.Models.Bedrock.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.MultiAgent\StrandsAgents.MultiAgent.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.SourceGenerator\StrandsAgents.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="StrandsAgents.Core" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.Models.Bedrock" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.MultiAgent" Version="0.1.4" />
+    <PackageReference Include="StrandsAgents.SourceGenerator" Version="0.1.4" />
   </ItemGroup>
 
 </Project>
