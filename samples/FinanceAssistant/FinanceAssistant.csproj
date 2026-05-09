@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Strands.Core" Version="0.1.2" />
-    <PackageReference Include="Strands.Models.Bedrock" Version="0.1.2" />
-    <PackageReference Include="Strands.MultiAgent" Version="0.1.2" />
-    <PackageReference Include="Strands.SourceGenerator" Version="0.1.2" />
+    <PackageReference Include="Strands.Core" Version="0.1.4" />
+    <PackageReference Include="Strands.Models.Bedrock" Version="0.1.4" />
+    <PackageReference Include="Strands.MultiAgent" Version="0.1.4" />
+    <PackageReference Include="Strands.SourceGenerator" Version="0.1.4" />
   </ItemGroup>
 
 </Project>

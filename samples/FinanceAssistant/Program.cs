@@ -25,10 +25,11 @@ using FinanceAssistant;
 //   dotnet run           (defaults to NVDA)
 //   dotnet run -- AAPL
 
-const string Region  = "us-east-1";
-const string ModelId = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 
-var ticker = args.Length > 0 ? args[0].ToUpperInvariant() : "NVDA";
+
+var ticker = args.Length > 0 && args[0] != "." && !args[0].StartsWith('-')
+    ? args[0].ToUpperInvariant()
+    : "NVDA";
 
 Console.WriteLine(new string('═', 70));
 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -37,7 +38,15 @@ Console.ResetColor();
 Console.WriteLine(new string('═', 70));
 Console.WriteLine();
 
+// Bedrock Model
+const string Region  = "us-east-1";
+const string ModelId = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 var model = new BedrockModel(region: Region, modelId: ModelId);
+
+// Gemini
+// var apikey="";
+//var model = new GeminiModel(apiKey: apikey, modelId: "gemini-2.5-flash");
+
 
 // Single shared tool instance — all generated wrappers reference it.
 var financeTools = new FinanceDataTool();
@@ -51,7 +60,7 @@ var financeTools = new FinanceDataTool();
 var priceAnalyst = new Agent(model,
     systemPrompt: """
         You are a quantitative price analyst covering equity markets.
-        Use the GetQuote tool to retrieve current price data for the requested ticker.
+        The user will tell you the ticker symbol. Call GetQuote with that exact ticker symbol.
         Analyse the price level, daily momentum, volume, and market capitalisation.
         Write a concise 3-4 sentence technical assessment.
         End your response with: Price Trend: Bullish | Neutral | Bearish
@@ -61,7 +70,7 @@ var priceAnalyst = new Agent(model,
 var fundamentalsAnalyst = new Agent(model,
     systemPrompt: """
         You are a fundamental equity analyst.
-        Use the GetFinancials tool to retrieve financial metrics for the requested ticker.
+        The user will tell you the ticker symbol. Call GetFinancials with that exact ticker symbol.
         Evaluate the valuation multiple (P/E), revenue scale and growth trajectory, and profitability.
         Write a concise 3-4 sentence fundamental assessment.
         End your response with: Valuation: Attractive | Fair | Stretched
@@ -71,7 +80,7 @@ var fundamentalsAnalyst = new Agent(model,
 var newsAnalyst = new Agent(model,
     systemPrompt: """
         You are a news and sentiment analyst.
-        Use the GetHeadlines tool to retrieve recent news for the requested ticker.
+        The user will tell you the ticker symbol. Call GetHeadlines with that exact ticker symbol.
         Assess each headline for its near-term impact — catalyst or headwind — and overall sentiment.
         Write a concise 3-4 sentence sentiment assessment.
         End your response with: Sentiment: Positive | Mixed | Negative
@@ -81,7 +90,7 @@ var newsAnalyst = new Agent(model,
 var riskAnalyst = new Agent(model,
     systemPrompt: """
         You are a portfolio risk analyst.
-        Use the GetRiskMetrics tool to retrieve risk data for the requested ticker.
+        The user will tell you the ticker symbol. Call GetRiskMetrics with that exact ticker symbol.
         Evaluate market correlation (beta), price volatility, and the 52-week range context.
         Write a concise 3-4 sentence risk assessment.
         End your response with: Risk Rating: Low | Medium | High
@@ -97,7 +106,8 @@ var parallel = new ParallelOrchestrator(
     [priceAnalyst, fundamentalsAnalyst, newsAnalyst, riskAnalyst]);
 
 var analyses = await parallel.RunAsync(
-    $"Analyse {ticker}. Retrieve the relevant data using your available tool, " +
+    $"The ticker symbol is {ticker}. " +
+    $"Retrieve the relevant data for {ticker} using your available tool, " +
     $"then provide your specialist assessment.");
 
 string[] analystLabels = ["Price", "Fundamentals", "News & Sentiment", "Risk"];

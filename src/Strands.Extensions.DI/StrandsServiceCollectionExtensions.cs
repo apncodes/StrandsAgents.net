@@ -140,6 +140,38 @@ public static class StrandsServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers <see cref="GeminiModel"/> as the <see cref="IModel"/> singleton,
+    /// using a named <see cref="HttpClient"/> managed by <see cref="IHttpClientFactory"/>.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="apiKey">Google AI Studio API key.</param>
+    /// <param name="modelId">Model identifier. Default: "gemini-2.0-flash".</param>
+    /// <param name="httpClientName">
+    /// Named client key. Defaults to <see cref="GeminiModel.HttpClientName"/>.
+    /// </param>
+    /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    public static IServiceCollection AddGeminiModel(
+        this IServiceCollection services,
+        string apiKey,
+        string modelId = "gemini-2.0-flash",
+        string? httpClientName = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(apiKey);
+
+        var clientName = httpClientName ?? GeminiModel.HttpClientName;
+        services.AddHttpClient(clientName);
+
+        services.AddSingleton<IModel>(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return new GeminiModel(apiKey, modelId, httpClientFactory: factory);
+        });
+
+        return services;
+    }
+
     // ── Tools ────────────────────────────────────────────────────────────────
 
     /// <summary>
