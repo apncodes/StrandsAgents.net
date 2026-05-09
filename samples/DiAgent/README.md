@@ -1,6 +1,6 @@
 # DiAgent
 
-A two-turn console assistant wired entirely through `Microsoft.Extensions.DependencyInjection`. Shows how to register models, tools, sessions, and the agent itself using the `Strands.Extensions.DI` extension methods, and how to configure context-window trimming through `AgentConfig`.
+A two-turn console assistant wired entirely through `Microsoft.Extensions.DependencyInjection`. Shows how to register models, tools, sessions, and the agent itself using the `StrandsAgents.Extensions.DI` extension methods, and how to configure context-window trimming through `AgentConfig`.
 
 ## SDK concepts demonstrated
 

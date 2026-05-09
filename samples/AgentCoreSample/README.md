@@ -57,4 +57,4 @@ docker buildx build --platform linux/arm64 -t agentcore-sample:latest .
 
 ## Real-world applicability
 
-Any Strands.NET agent can be deployed to AgentCore Runtime by adding `Strands.AgentCore` and two lines of hosting code. AgentCore provides infrastructure-level session isolation, scaling, and observability — your agent code does not change.
+Any Strands.NET agent can be deployed to AgentCore Runtime by adding `StrandsAgents.Runtime` and two lines of hosting code. AgentCore provides infrastructure-level session isolation, scaling, and observability — your agent code does not change.

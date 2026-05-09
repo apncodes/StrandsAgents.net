@@ -1,6 +1,6 @@
 # CustomerServiceApi
 
-A production-shaped customer service API. Each session gets its own isolated `Agent` with conversation history persisted to disk. Hooks log every tool call and model response. Built with ASP.NET Core minimal APIs and the `Strands.Extensions.DI` package.
+A production-shaped customer service API. Each session gets its own isolated `Agent` with conversation history persisted to disk. Hooks log every tool call and model response. Built with ASP.NET Core minimal APIs and the `StrandsAgents.Extensions.DI` package.
 
 ## SDK concepts demonstrated
 

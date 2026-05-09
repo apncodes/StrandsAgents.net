@@ -3,7 +3,7 @@
 > **The Strands Agents framework — built for .NET.**
 > Model-driven agentic AI for C# developers, built on the same principles as [AWS Strands Agents](https://strandsagents.com).
 
-[![NuGet](https://img.shields.io/nuget/v/Strands.Core?label=NuGet&color=blue)](https://www.nuget.org/packages/Strands.Core)
+[![NuGet](https://img.shields.io/nuget/v/StrandsAgents.Core?label=NuGet&color=blue)](https://www.nuget.org/packages/StrandsAgents.Core)
 [![CI](https://github.com/apncodes/strands.net/actions/workflows/ci.yml/badge.svg)](https://github.com/apncodes/strands.net/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
@@ -12,17 +12,17 @@
 ## Quickstart
 
 ```bash
-dotnet add package Strands.Core
-dotnet add package Strands.Models.Bedrock
-dotnet add package Strands.Tools
-dotnet add package Strands.SourceGenerator
+dotnet add package StrandsAgents.Core
+dotnet add package StrandsAgents.Models.Bedrock
+dotnet add package StrandsAgents.Tools
+dotnet add package StrandsAgents.SourceGenerator
 ```
 
 Decorate a method with `[Tool]` — the Roslyn source generator emits a compile-time `ITool` wrapper at build time:
 
 ```csharp
-using Strands.Core;
-using Strands.Models.Bedrock;
+using StrandsAgents.Core;
+using StrandsAgents.Models.Bedrock;
 using MyApp;
 
 // Wire up the agent — MyTools_GetWeather_Tool is generated at compile time
@@ -104,7 +104,7 @@ namespace MyApp
 ## DI integration (ASP.NET Core / Worker Service)
 
 ```bash
-dotnet add package Strands.Extensions.DI
+dotnet add package StrandsAgents.Extensions.DI
 ```
 
 ```csharp
@@ -142,7 +142,7 @@ var agent = app.Services.GetRequiredService<IAgent>();
 - **Agent as tool** — wrap any `IAgent` as an `ITool` with `agent.AsTool()` for hierarchical orchestration
 - **MCP** — connect any Model Context Protocol server (stdio or SSE) via `McpToolProvider`
 - **A2A protocol** — expose agents over HTTP with `MapA2AEndpoint`; call remote agents with `A2AAgent` (cross-framework, cross-language)
-- **AgentCore Runtime** *(optional)* — `MapAgentCoreEndpoints()` deploys any agent to Amazon Bedrock AgentCore Runtime in one line; managed Memory, Browser, and Code Interpreter tools available via `Strands.AgentCore`
+- **AgentCore Runtime** *(optional)* — `MapAgentCoreEndpoints()` deploys any agent to Amazon Bedrock AgentCore Runtime in one line; managed Memory, Browser, and Code Interpreter tools available via `StrandsAgents.Runtime`
 - **AgentCore Gateway** *(optional)* — `AgentCoreGatewayToolProvider` connects to an Amazon Bedrock AgentCore Gateway MCP endpoint and exposes its tools as `ITool` instances; supports IAM SigV4, JWT Bearer, and network-isolated (no-auth) modes; `AddAgentCoreGatewayTools()` registers gateway tools directly into the DI container
 
 ---
@@ -209,7 +209,7 @@ var writerAgent  = new Agent(model, tools: [researchTool]);
 Connect your agent to tools hosted on an Amazon Bedrock AgentCore Gateway — a managed MCP endpoint that proxies external APIs, databases, and services with built-in auth and observability.
 
 ```bash
-dotnet add package Strands.AgentCore
+dotnet add package StrandsAgents.Runtime
 ```
 
 ```csharp
@@ -251,7 +251,7 @@ builder.Services
 Deploy any Strands.NET agent to Amazon Bedrock AgentCore Runtime with one line. Your agent code is unchanged.
 
 ```bash
-dotnet add package Strands.AgentCore
+dotnet add package StrandsAgents.Runtime
 ```
 
 ```csharp
@@ -271,13 +271,13 @@ app.Run();
 
 | Package | Description |
 |---|---|
-| `Strands.Core` | Agent, event loop, tool system, hooks, session management |
-| `Strands.Models.Bedrock` | Amazon Bedrock model provider (Converse API) |
-| `Strands.Tools` | Built-in tools: calculator, file read/write, HTTP request |
-| `Strands.SourceGenerator` | Roslyn source generator — emits `ITool` wrappers from `[Tool]` attributes |
-| `Strands.Extensions.DI` | ASP.NET Core / Worker Service DI extensions |
-| `Strands.MultiAgent` | Pipeline, parallel, and graph orchestration; A2A protocol |
-| `Strands.AgentCore` | Amazon Bedrock AgentCore Runtime hosting |
+| `StrandsAgents.Core` | Agent, event loop, tool system, hooks, session management |
+| `StrandsAgents.Models.Bedrock` | Amazon Bedrock model provider (Converse API) |
+| `StrandsAgents.Tools` | Built-in tools: calculator, file read/write, HTTP request |
+| `StrandsAgents.SourceGenerator` | Roslyn source generator — emits `ITool` wrappers from `[Tool]` attributes |
+| `StrandsAgents.Extensions.DI` | ASP.NET Core / Worker Service DI extensions |
+| `StrandsAgents.MultiAgent` | Pipeline, parallel, and graph orchestration; A2A protocol |
+| `StrandsAgents.Runtime` | Amazon Bedrock AgentCore Runtime hosting |
 
 ---
 
@@ -316,7 +316,7 @@ This project is not affiliated with or endorsed by AWS.
 
 ## Contributing
 
-PRs, issues, and feedback are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The biggest areas of need are additional model providers (Gemini, Ollama), more built-in tools, and real-world samples.
+PRs, issues, and feedback are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The biggest areas of need are additional model providers (Ollama), more built-in tools, and real-world samples.
 
 ---
 
