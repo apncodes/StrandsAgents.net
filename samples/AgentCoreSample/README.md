@@ -7,7 +7,7 @@ Demonstrates deploying a Strands.NET agent to [Amazon Bedrock AgentCore Runtime]
 - **`MapAgentCoreEndpoints()`** — registers `POST /invocations` and `GET /health` on the ASP.NET Core app; this is the .NET equivalent of Python's `@app.entrypoint`
 - **`UseAgentCorePort(8080)`** — binds to the port AgentCore Runtime expects
 - **`AgentCoreBrowserTool`** — managed browser sandbox registered as a standard `ITool`; the agent can navigate, extract text, and interact with JS-rendered pages
-- **`AgentCoreCodeInterpreterTool`** — managed code execution sandbox; the agent can run Python, JavaScript, or Bash snippets
+- **`AgentCoreCodeInterpreterTool`** — managed code execution sandbox; the agent can run Python, JavaScript, or TypeScript snippets
 - **`AgentCoreSessionManager`** — conversation history persisted to AgentCore Memory; works identically to `FileSessionManager` from the agent's perspective
 
 ## The key point
