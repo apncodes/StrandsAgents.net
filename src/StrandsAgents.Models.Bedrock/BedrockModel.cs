@@ -491,22 +491,19 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel, StrandsAgents.Core
         // Handle guardrail intervention
         if (stopReason == StrandsAgents.Core.StopReason.GuardrailBlocked && _guardrailConfig is not null)
         {
-            // Extract the canned blocked message from Bedrock's response content blocks first.
-            // The Converse API returns the guardrail's configured blocked-outputs-messaging
-            // as a text block when the response is intervened.
-            string? bedrockBlockedMessage = response.Output?.Message?.Content
-                ?.FirstOrDefault(b => b.Text is not null)?.Text;
-
             if (_guardrailConfig.RedactOutput)
             {
-                // Priority: explicit RedactOutputMessage > Bedrock's blocked message > hardcoded fallback
-                text = _guardrailConfig.RedactOutputMessage
-                    ?? bedrockBlockedMessage
-                    ?? "[Output redacted by guardrail]";
+                // Redact mode: suppress the original response entirely.
+                // Use the explicit override message if set, otherwise the hardcoded placeholder.
+                // Never surface the original model output when redaction is enabled.
+                text = _guardrailConfig.RedactOutputMessage ?? "[Output redacted by guardrail]";
             }
             else
             {
-                // Not redacting — surface Bedrock's blocked message if available
+                // Not redacting — surface Bedrock's blocked message from the response if available,
+                // falling back to whatever text the model returned.
+                var bedrockBlockedMessage = response.Output?.Message?.Content
+                    ?.FirstOrDefault(b => b.Text is not null)?.Text;
                 text ??= bedrockBlockedMessage;
             }
         }
