@@ -18,6 +18,11 @@ namespace StrandsAgents.Runtime.Tools;
 /// that are not naturally captured in conversation history — e.g. user preferences,
 /// domain knowledge, or task-specific state.
 /// </para>
+///
+/// <para>
+/// All HTTP requests are signed with AWS SigV4. Pass a <paramref name="clientOverride"/>
+/// to inject a plain <see cref="HttpClient"/> for unit testing (bypasses SigV4).
+/// </para>
 /// </summary>
 public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
 {
@@ -30,7 +35,7 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
             that must survive beyond the current conversation.
 
             Operations:
-            - store_memory: Save a key/value pair to long-term memory.
+            - store_memory: Save a key/value pair to long-term memory. Optionally set ttl_seconds for automatic expiry.
             - retrieve_memory: Fetch a stored memory by key.
             - delete_memory: Remove a memory entry by key.
             """,
@@ -50,6 +55,10 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
                 "value": {
                   "type": "string",
                   "description": "The value to store. Required for store_memory."
+                },
+                "ttl_seconds": {
+                  "type": "integer",
+                  "description": "Optional TTL in seconds for store_memory. The memory entry will be automatically deleted after this many seconds. Must be a positive integer."
                 }
               },
               "required": ["operation", "key"]
@@ -67,7 +76,7 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
     /// <param name="region">AWS region. Default: <c>us-east-1</c>.</param>
     /// <param name="clientOverride">
     /// Optional pre-configured <see cref="HttpClient"/>. When provided, the tool does
-    /// not own the client and will not dispose it. Intended for testing.
+    /// not own the client and will not dispose it. Intended for testing — bypasses SigV4.
     /// </param>
     public AgentCoreMemoryTool(
         string memoryId,
@@ -79,10 +88,7 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
 
         _memoryId = memoryId;
         _ownsClient = clientOverride is null;
-        _http = clientOverride ?? new HttpClient
-        {
-            BaseAddress = new Uri($"https://bedrock-agentcore.{region}.amazonaws.com"),
-        };
+        _http = clientOverride ?? AgentCoreHttpClientFactory.CreateSigned(region);
     }
 
     /// <inheritdoc/>
@@ -103,9 +109,9 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
 
         return operation switch
         {
-            "store_memory" => await StoreAsync(key, input, ct).ConfigureAwait(false),
+            "store_memory"    => await StoreAsync(key, input, ct).ConfigureAwait(false),
             "retrieve_memory" => await RetrieveAsync(key, ct).ConfigureAwait(false),
-            "delete_memory" => await DeleteAsync(key, ct).ConfigureAwait(false),
+            "delete_memory"   => await DeleteAsync(key, ct).ConfigureAwait(false),
             _ => ToolResult.Failure("agentcore_memory",
                 $"Unknown operation '{operation}'. Supported: store_memory, retrieve_memory, delete_memory."),
         };
@@ -117,7 +123,20 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
             valueEl.GetString() is not { } value)
             return ToolResult.Failure("agentcore_memory", "Missing required field: value (required for store_memory).");
 
-        var payload = new { key, value };
+        // Validate optional ttl_seconds.
+        int? ttlSeconds = null;
+        if (input.TryGetProperty("ttl_seconds", out var ttlEl) && ttlEl.ValueKind == JsonValueKind.Number)
+        {
+            var ttl = ttlEl.GetInt32();
+            if (ttl <= 0)
+                return ToolResult.Failure("agentcore_memory", "ttl_seconds must be a positive integer.");
+            ttlSeconds = ttl;
+        }
+
+        var payload = ttlSeconds.HasValue
+            ? (object)new { key, value, ttlSeconds = ttlSeconds.Value }
+            : new { key, value };
+
         var path = $"/memories/{Uri.EscapeDataString(_memoryId)}/records";
         using var response = await _http.PostAsJsonAsync(path, payload, ct).ConfigureAwait(false);
 
@@ -157,7 +176,6 @@ public sealed class AgentCoreMemoryTool : ITool, IAsyncDisposable
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        // Only dispose if we created the client (not when clientOverride was provided).
         if (_ownsClient)
             _http.Dispose();
 

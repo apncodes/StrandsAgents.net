@@ -11,12 +11,14 @@ namespace StrandsAgents.Runtime.Session;
 /// <para>
 /// Automatically persists full conversation history and agent state to AgentCore Memory
 /// on every <see cref="SaveAsync"/> call, and restores it on <see cref="LoadAsync"/>.
+/// Expired sessions (where <c>ExpiresAt &lt;= UtcNow</c>) are deleted and treated as
+/// not found.
 /// </para>
 ///
 /// <para>
-/// This is an alternative to <c>FileSessionManager</c> — use this when your agent
-/// is deployed to AgentCore Runtime and you want managed, durable session storage
-/// without operating your own database or S3 bucket.
+/// All HTTP requests are signed with AWS SigV4 using credentials resolved from the
+/// standard AWS credential chain. Pass a <paramref name="clientOverride"/> to inject a
+/// plain <see cref="HttpClient"/> for unit testing (bypasses SigV4).
 /// </para>
 /// </summary>
 public sealed class AgentCoreSessionManager : ISessionManager, IAsyncDisposable
@@ -34,7 +36,7 @@ public sealed class AgentCoreSessionManager : ISessionManager, IAsyncDisposable
     /// <param name="region">AWS region. Default: <c>us-east-1</c>.</param>
     /// <param name="clientOverride">
     /// Optional pre-configured <see cref="HttpClient"/>. When provided, the manager does
-    /// not own the client and will not dispose it. Intended for testing.
+    /// not own the client and will not dispose it. Intended for testing — bypasses SigV4.
     /// </param>
     public AgentCoreSessionManager(
         string memoryId,
@@ -46,13 +48,11 @@ public sealed class AgentCoreSessionManager : ISessionManager, IAsyncDisposable
 
         _memoryId = memoryId;
         _ownsClient = clientOverride is null;
-        _http = clientOverride ?? new HttpClient
-        {
-            BaseAddress = new Uri($"https://bedrock-agentcore.{region}.amazonaws.com"),
-        };
+        _http = clientOverride ?? AgentCoreHttpClientFactory.CreateSigned(region);
     }
 
     /// <inheritdoc/>
+    /// <remarks>Returns <c>null</c> and deletes the remote record when the session has expired.</remarks>
     public async Task<AgentSession?> LoadAsync(string sessionId, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
@@ -79,11 +79,21 @@ public sealed class AgentCoreSessionManager : ISessionManager, IAsyncDisposable
             : JsonSerializer.Deserialize<Dictionary<string, object?>>(record.StateJson, _json)
               ?? [];
 
-        return new AgentSession(
+        var session = new AgentSession(
             SessionId: sessionId,
             Messages: messages,
             State: state,
-            LastUpdated: record.LastUpdated);
+            LastUpdated: record.LastUpdated,
+            ExpiresAt: record.ExpiresAt);
+
+        // Enforce expiry: treat expired sessions as not found and clean up.
+        if (session.ExpiresAt.HasValue && session.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            await DeleteAsync(sessionId, ct).ConfigureAwait(false);
+            return null;
+        }
+
+        return session;
     }
 
     /// <inheritdoc/>
@@ -96,11 +106,25 @@ public sealed class AgentCoreSessionManager : ISessionManager, IAsyncDisposable
             SessionId: sessionId,
             MessagesJson: JsonSerializer.Serialize(session.Messages, _json),
             StateJson: JsonSerializer.Serialize(session.State, _json),
-            LastUpdated: session.LastUpdated);
+            LastUpdated: session.LastUpdated,
+            ExpiresAt: session.ExpiresAt);
 
         var path = $"/memories/{Uri.EscapeDataString(_memoryId)}/sessions/{Uri.EscapeDataString(sessionId)}";
         using var response = await _http.PutAsJsonAsync(path, record, _json, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteAsync(string sessionId, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+
+        var path = $"/memories/{Uri.EscapeDataString(_memoryId)}/sessions/{Uri.EscapeDataString(sessionId)}";
+        using var response = await _http.DeleteAsync(path, ct).ConfigureAwait(false);
+
+        // 404 is acceptable — idempotent delete.
+        if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            response.EnsureSuccessStatusCode();
     }
 
     /// <inheritdoc/>
@@ -114,8 +138,9 @@ public sealed class AgentCoreSessionManager : ISessionManager, IAsyncDisposable
 
     // Wire format stored in AgentCore Memory.
     private sealed record SessionRecord(
-        [property: JsonPropertyName("sessionId")] string SessionId,
+        [property: JsonPropertyName("sessionId")]    string SessionId,
         [property: JsonPropertyName("messagesJson")] string MessagesJson,
-        [property: JsonPropertyName("stateJson")] string StateJson,
-        [property: JsonPropertyName("lastUpdated")] DateTimeOffset LastUpdated);
+        [property: JsonPropertyName("stateJson")]    string StateJson,
+        [property: JsonPropertyName("lastUpdated")]  DateTimeOffset LastUpdated,
+        [property: JsonPropertyName("expiresAt")]    DateTimeOffset? ExpiresAt = null);
 }

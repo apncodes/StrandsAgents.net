@@ -8,7 +8,7 @@ namespace StrandsAgents.Core;
 /// The synchronous <see cref="Trim"/> method is a no-op for this manager.
 /// Callers should invoke <see cref="TrimAsync"/> to trigger summarization.
 /// </remarks>
-public sealed class SummarizingConversationManager : IConversationManager
+public sealed class SummarizingConversationManager : IAutoTrimConversationManager
 {
     private readonly IModel _model;
     private readonly List<Message> _messages = [];
@@ -41,6 +41,10 @@ public sealed class SummarizingConversationManager : IConversationManager
     /// <inheritdoc/>
     /// <remarks>No-op — use <see cref="TrimAsync"/> for summarization.</remarks>
     public void Trim() { /* No-op — async summarization requires TrimAsync */ }
+
+    /// <inheritdoc/>
+    /// <remarks>Delegates to <see cref="TrimAsync"/>.</remarks>
+    public Task TrimAfterTurnAsync(CancellationToken ct = default) => TrimAsync(ct);
 
     /// <summary>
     /// Summarizes older messages via a model call when the message count exceeds <see cref="Threshold"/>.

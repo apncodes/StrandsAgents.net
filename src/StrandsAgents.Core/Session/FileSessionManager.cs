@@ -41,6 +41,7 @@ public sealed class FileSessionManager : ISessionManager
     }
 
     /// <inheritdoc/>
+    /// <remarks>Returns <c>null</c> and deletes the file when the session has expired.</remarks>
     public async Task<AgentSession?> LoadAsync(string sessionId, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
@@ -50,7 +51,30 @@ public sealed class FileSessionManager : ISessionManager
             return null;
 
         var json = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<AgentSession>(json, _options);
+        var session = JsonSerializer.Deserialize<AgentSession>(json, _options);
+
+        if (session is null)
+            return null;
+
+        if (session.ExpiresAt.HasValue && session.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            File.Delete(path);
+            return null;
+        }
+
+        return session;
+    }
+
+    /// <inheritdoc/>
+    public Task DeleteAsync(string sessionId, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+
+        var path = FilePath(sessionId);
+        if (File.Exists(path))
+            File.Delete(path);
+
+        return Task.CompletedTask;
     }
 
     private string FilePath(string sessionId) =>

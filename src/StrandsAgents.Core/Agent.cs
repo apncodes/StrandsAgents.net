@@ -48,6 +48,10 @@ public sealed class Agent : IAgent
         // Sync conversation manager with any new messages added during the loop
         SyncMessages(updatedMessages);
 
+        // Auto-trim if the conversation manager supports it (e.g. SummarizingConversationManager)
+        if (_conversation is IAutoTrimConversationManager autoTrim)
+            await autoTrim.TrimAfterTurnAsync(ct).ConfigureAwait(false);
+
         if (_sessionManager is not null)
         {
             var session = new AgentSession(
@@ -75,6 +79,10 @@ public sealed class Agent : IAgent
             if (evt is AgentCompleteEvent)
             {
                 SyncMessages(messages);
+
+                // Auto-trim if the conversation manager supports it
+                if (_conversation is IAutoTrimConversationManager autoTrim)
+                    await autoTrim.TrimAfterTurnAsync(ct).ConfigureAwait(false);
 
                 if (_sessionManager is not null)
                 {
