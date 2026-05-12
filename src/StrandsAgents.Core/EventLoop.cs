@@ -12,13 +12,20 @@ internal sealed class EventLoop
     private readonly ToolRegistry _tools;
     private readonly AgentConfig _config;
     private readonly HookRegistry? _hooks;
+    private readonly IGuardrailEvaluator? _guardrailEvaluator;
 
-    public EventLoop(IModel model, ToolRegistry tools, AgentConfig config, HookRegistry? hooks = null)
+    public EventLoop(
+        IModel model,
+        ToolRegistry tools,
+        AgentConfig config,
+        HookRegistry? hooks = null,
+        IGuardrailEvaluator? guardrailEvaluator = null)
     {
         _model = model;
         _tools = tools;
         _config = config;
         _hooks = hooks;
+        _guardrailEvaluator = guardrailEvaluator;
     }
 
     /// <summary>Runs the agent loop and returns the final result.</summary>
@@ -48,8 +55,14 @@ internal sealed class EventLoop
                     .ConfigureAwait(false)).ToList()
                 : messages;
 
+            // Fire PiiRedactionRequestEvent — handlers may replace the message list
+            var piiRequestEvt = new PiiRedactionRequestEvent(contextMessages);
+            if (_hooks is not null)
+                await _hooks.FireAsync(piiRequestEvt, ct).ConfigureAwait(false);
+            var effectiveMessages = piiRequestEvt.Messages;
+
             var request = new ModelRequest(
-                contextMessages,
+                effectiveMessages,
                 systemPrompt,
                 _tools.GetDefinitions(),
                 new ModelParameters());
@@ -85,6 +98,21 @@ internal sealed class EventLoop
                 await _hooks.FireAsync(afterEvt, ct).ConfigureAwait(false);
             }
 
+            // Fire PiiRedactionResponseEvent — handlers may replace the response
+            var piiResponseEvt = new PiiRedactionResponseEvent(response);
+            if (_hooks is not null)
+                await _hooks.FireAsync(piiResponseEvt, ct).ConfigureAwait(false);
+            response = piiResponseEvt.Response;
+
+            // Halt immediately if a guardrail blocked the response
+            if (response.StopReason == StopReason.GuardrailBlocked)
+            {
+                var metrics = new AgentMetrics(sw.Elapsed, iterations, toolCallCount, totalUsage);
+                var result = new AgentResult(response.TextContent ?? string.Empty, StopReason.GuardrailBlocked, totalUsage, metrics);
+                RecordInvokeMetrics(agentActivity, totalUsage, sw, result.StopReason);
+                return (result, messages);
+            }
+
             // Append assistant message
             var assistantContent = BuildAssistantContent(response);
             messages.Add(new Message(Role.Assistant, assistantContent));
@@ -102,6 +130,7 @@ internal sealed class EventLoop
                 toolCallCount += response.ToolCalls.Count;
 
                 IReadOnlyList<ToolResult> toolResults;
+                bool guardrailHalted = false;
 
                 if (_hooks is not null)
                 {
@@ -121,10 +150,19 @@ internal sealed class EventLoop
 
                         var singleResult = await _tools.ExecuteAsync([call], false, ct).ConfigureAwait(false);
                         var toolResult = singleResult[0];
-                        results.Add(toolResult);
 
-                        var afterToolEvt = new AfterToolCallEvent(call, toolResult);
+                        // Evaluate tool result against guardrail
+                        var (evaluatedResult, shouldHalt) = await EvaluateToolResultAsync(toolResult, ct).ConfigureAwait(false);
+                        results.Add(evaluatedResult);
+
+                        var afterToolEvt = new AfterToolCallEvent(call, evaluatedResult);
                         await _hooks.FireAsync(afterToolEvt, ct).ConfigureAwait(false);
+
+                        if (shouldHalt)
+                        {
+                            guardrailHalted = true;
+                            break;
+                        }
                     }
 
                     if (interrupted)
@@ -147,8 +185,20 @@ internal sealed class EventLoop
                 }
                 else
                 {
-                    // No hooks — use the fast batch path
-                    toolResults = await _tools.ExecuteAsync(response.ToolCalls, _config.ParallelToolExecution, ct).ConfigureAwait(false);
+                    // No hooks — use the fast batch path, then evaluate each result
+                    var batchResults = await _tools.ExecuteAsync(response.ToolCalls, _config.ParallelToolExecution, ct).ConfigureAwait(false);
+                    var evaluatedList = new List<ToolResult>(batchResults.Count);
+                    foreach (var tr in batchResults)
+                    {
+                        var (evaluatedResult, shouldHalt) = await EvaluateToolResultAsync(tr, ct).ConfigureAwait(false);
+                        evaluatedList.Add(evaluatedResult);
+                        if (shouldHalt)
+                        {
+                            guardrailHalted = true;
+                            break;
+                        }
+                    }
+                    toolResults = evaluatedList;
                 }
 
                 // Append tool results as user message
@@ -156,6 +206,15 @@ internal sealed class EventLoop
                     .Select(r => (ContentBlock)new ToolResultBlock(r.ToolCallId, r.Content, r.IsError))
                     .ToList();
                 messages.Add(new Message(Role.User, toolResultContent));
+
+                if (guardrailHalted)
+                {
+                    var haltMetrics = new AgentMetrics(sw.Elapsed, iterations, toolCallCount, totalUsage);
+                    var haltResult = new AgentResult(string.Empty, StopReason.GuardrailBlocked, totalUsage, haltMetrics);
+                    RecordInvokeMetrics(agentActivity, totalUsage, sw, haltResult.StopReason);
+                    return (haltResult, messages);
+                }
+
                 continue;
             }
 
@@ -199,8 +258,14 @@ internal sealed class EventLoop
                     .ConfigureAwait(false)).ToList()
                 : messages;
 
+            // Fire PiiRedactionRequestEvent — handlers may replace the message list
+            var piiRequestEvt = new PiiRedactionRequestEvent(contextMessages);
+            if (_hooks is not null)
+                await _hooks.FireAsync(piiRequestEvt, ct).ConfigureAwait(false);
+            var effectiveMessages = piiRequestEvt.Messages;
+
             var request = new ModelRequest(
-                contextMessages,
+                effectiveMessages,
                 systemPrompt,
                 _tools.GetDefinitions(),
                 new ModelParameters());
@@ -265,6 +330,22 @@ internal sealed class EventLoop
                 await _hooks.FireAsync(afterEvt, ct).ConfigureAwait(false);
             }
 
+            // Fire PiiRedactionResponseEvent — handlers may replace the response
+            var piiResponseEvt = new PiiRedactionResponseEvent(finalResponse);
+            if (_hooks is not null)
+                await _hooks.FireAsync(piiResponseEvt, ct).ConfigureAwait(false);
+            finalResponse = piiResponseEvt.Response;
+
+            // Halt immediately if a guardrail blocked the response
+            if (finalResponse.StopReason == StopReason.GuardrailBlocked)
+            {
+                var metrics = new AgentMetrics(sw.Elapsed, iterations, toolCallCount, totalUsage);
+                var result = new AgentResult(finalResponse.TextContent ?? string.Empty, StopReason.GuardrailBlocked, totalUsage, metrics);
+                RecordInvokeMetrics(agentActivity, totalUsage, sw, result.StopReason);
+                yield return new AgentCompleteEvent(result);
+                yield break;
+            }
+
             var assistantContent = BuildAssistantContent(finalResponse);
             messages.Add(new Message(Role.Assistant, assistantContent));
 
@@ -282,6 +363,7 @@ internal sealed class EventLoop
                 toolCallCount += finalResponse.ToolCalls.Count;
 
                 IReadOnlyList<ToolResult> toolResults;
+                bool guardrailHalted = false;
 
                 if (_hooks is not null)
                 {
@@ -301,12 +383,21 @@ internal sealed class EventLoop
 
                         var singleResult = await _tools.ExecuteAsync([call], false, ct).ConfigureAwait(false);
                         var toolResult = singleResult[0];
-                        results.Add(toolResult);
 
-                        yield return new ToolCallResultEvent(toolResult.ToolCallId, toolResult);
+                        // Evaluate tool result against guardrail
+                        var (evaluatedResult, shouldHalt) = await EvaluateToolResultAsync(toolResult, ct).ConfigureAwait(false);
+                        results.Add(evaluatedResult);
 
-                        var afterToolEvt = new AfterToolCallEvent(call, toolResult);
+                        yield return new ToolCallResultEvent(evaluatedResult.ToolCallId, evaluatedResult);
+
+                        var afterToolEvt = new AfterToolCallEvent(call, evaluatedResult);
                         await _hooks.FireAsync(afterToolEvt, ct).ConfigureAwait(false);
+
+                        if (shouldHalt)
+                        {
+                            guardrailHalted = true;
+                            break;
+                        }
                     }
 
                     if (interrupted)
@@ -330,17 +421,37 @@ internal sealed class EventLoop
                 }
                 else
                 {
-                    // No hooks — use the fast batch path
-                    toolResults = await _tools.ExecuteAsync(finalResponse.ToolCalls, _config.ParallelToolExecution, ct).ConfigureAwait(false);
-
-                    foreach (var tr in toolResults)
-                        yield return new ToolCallResultEvent(tr.ToolCallId, tr);
+                    // No hooks — use the fast batch path, then evaluate each result
+                    var batchResults = await _tools.ExecuteAsync(finalResponse.ToolCalls, _config.ParallelToolExecution, ct).ConfigureAwait(false);
+                    var evaluatedList = new List<ToolResult>(batchResults.Count);
+                    foreach (var tr in batchResults)
+                    {
+                        var (evaluatedResult, shouldHalt) = await EvaluateToolResultAsync(tr, ct).ConfigureAwait(false);
+                        evaluatedList.Add(evaluatedResult);
+                        yield return new ToolCallResultEvent(evaluatedResult.ToolCallId, evaluatedResult);
+                        if (shouldHalt)
+                        {
+                            guardrailHalted = true;
+                            break;
+                        }
+                    }
+                    toolResults = evaluatedList;
                 }
 
                 var toolResultContent = toolResults
                     .Select(r => (ContentBlock)new ToolResultBlock(r.ToolCallId, r.Content, r.IsError))
                     .ToList();
                 messages.Add(new Message(Role.User, toolResultContent));
+
+                if (guardrailHalted)
+                {
+                    var haltMetrics = new AgentMetrics(sw.Elapsed, iterations, toolCallCount, totalUsage);
+                    var haltResult = new AgentResult(string.Empty, StopReason.GuardrailBlocked, totalUsage, haltMetrics);
+                    RecordInvokeMetrics(agentActivity, totalUsage, sw, haltResult.StopReason);
+                    yield return new AgentCompleteEvent(haltResult);
+                    yield break;
+                }
+
                 continue;
             }
 
@@ -357,6 +468,62 @@ internal sealed class EventLoop
         var maxResult = new AgentResult(string.Empty, StopReason.MaxIterations, totalUsage, maxMetrics);
         RecordInvokeMetrics(agentActivity, totalUsage, sw, maxResult.StopReason);
         yield return new AgentCompleteEvent(maxResult);
+    }
+
+    /// <summary>
+    /// Evaluates a tool result against the configured guardrail evaluator.
+    /// Returns the (possibly replaced) result and a flag indicating whether the loop should halt.
+    /// </summary>
+    private async Task<(ToolResult Result, bool ShouldHalt)> EvaluateToolResultAsync(
+        ToolResult toolResult,
+        CancellationToken ct)
+    {
+        if (_guardrailEvaluator is null || !_guardrailEvaluator.IsEnabled || string.IsNullOrEmpty(toolResult.Content))
+            return (toolResult, false);
+
+        try
+        {
+            var evalResult = await _guardrailEvaluator
+                .EvaluateAsync(toolResult.Content, "OUTPUT", ct)
+                .ConfigureAwait(false);
+
+            if (evalResult.Action == GuardrailAction.None)
+                return (toolResult, false);
+
+            // Fire violation event
+            var violationEvt = new GuardrailViolationEvent(
+                evalResult.GuardrailId ?? string.Empty,
+                evalResult.GuardrailVersion ?? string.Empty,
+                evalResult.Action,
+                GuardrailSource.ToolResult,
+                evalResult.BlockedMessage);
+            if (_hooks is not null)
+                await _hooks.FireAsync(violationEvt, ct).ConfigureAwait(false);
+
+            var replacedContent = evalResult.BlockedMessage ?? "[Tool result redacted by guardrail]";
+            var replacedResult = toolResult with { Content = replacedContent };
+
+            if (_guardrailEvaluator.ShadowMode)
+            {
+                // Shadow mode: fire event but never replace content or halt
+                return (toolResult, false);
+            }
+
+            if (evalResult.Action == GuardrailAction.Blocked)
+            {
+                // Enforcing mode + Blocked: replace content and halt
+                return (replacedResult, true);
+            }
+
+            // Enforcing mode + Intervened: replace content, continue loop
+            return (replacedResult, false);
+        }
+        catch (Exception ex)
+        {
+            // Log and continue with original content
+            System.Diagnostics.Debug.WriteLine($"[EventLoop] Guardrail evaluation of tool result failed: {ex.Message}");
+            return (toolResult, false);
+        }
     }
 
     private static void RecordInvokeMetrics(Activity? activity, TokenUsage usage, Stopwatch sw, StopReason stopReason)

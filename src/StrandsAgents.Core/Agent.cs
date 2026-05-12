@@ -22,7 +22,8 @@ public sealed class Agent : IAgent
         IConversationManager? conversationManager = null,
         ISessionManager? sessionManager = null,
         HookRegistry? hooks = null,
-        AgentConfig? config = null)
+        AgentConfig? config = null,
+        IGuardrailEvaluator? guardrailEvaluator = null)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         _systemPrompt = systemPrompt;
@@ -33,7 +34,7 @@ public sealed class Agent : IAgent
         if (tools is not null)
             registry.RegisterAll(tools);
 
-        _eventLoop = new EventLoop(model, registry, config ?? new AgentConfig(), hooks);
+        _eventLoop = new EventLoop(model, registry, config ?? new AgentConfig(), hooks, guardrailEvaluator);
     }
 
     /// <inheritdoc/>

@@ -6,4 +6,5 @@ namespace StrandsAgents.Core;
 public record ToolDefinition(
     string Name,
     string Description,
-    JsonElement InputSchema);
+    JsonElement InputSchema,
+    IReadOnlyDictionary<string, ToolParameterConstraints>? ParameterConstraints = null);

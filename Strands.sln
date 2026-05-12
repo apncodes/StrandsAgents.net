@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentCoreSample", "samples\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentCoreGatewaySample", "samples\AgentCoreGatewaySample\AgentCoreGatewaySample.csproj", "{B2D3320C-45F3-4E46-92CD-4F72465FA9F6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResponsibleAiSample", "samples\ResponsibleAiSample\ResponsibleAiSample.csproj", "{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -385,6 +387,18 @@ Global
 		{B2D3320C-45F3-4E46-92CD-4F72465FA9F6}.Release|x64.Build.0 = Release|Any CPU
 		{B2D3320C-45F3-4E46-92CD-4F72465FA9F6}.Release|x86.ActiveCfg = Release|Any CPU
 		{B2D3320C-45F3-4E46-92CD-4F72465FA9F6}.Release|x86.Build.0 = Release|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Debug|x64.Build.0 = Debug|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Debug|x86.Build.0 = Debug|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Release|x64.ActiveCfg = Release|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Release|x64.Build.0 = Release|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Release|x86.ActiveCfg = Release|Any CPU
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -417,5 +431,6 @@ Global
 		{1FD61833-C9FF-436E-93CE-EF11943CB2B2} = {A1B2C3D4-E5F6-7890-ABCD-EF123456780D}
 		{5DE74ABD-7661-441A-94FE-D5951683AFC2} = {A1B2C3D4-E5F6-7890-ABCD-EF123456780E}
 		{B2D3320C-45F3-4E46-92CD-4F72465FA9F6} = {A1B2C3D4-E5F6-7890-ABCD-EF123456780E}
+		{C3E4F5A6-B7C8-4D9E-AF01-234567890ABC} = {A1B2C3D4-E5F6-7890-ABCD-EF123456780E}
 	EndGlobalSection
 EndGlobal

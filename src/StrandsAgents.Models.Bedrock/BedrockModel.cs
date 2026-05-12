@@ -17,11 +17,13 @@ namespace StrandsAgents.Models.Bedrock;
 /// on-demand throughput which is not available by default.
 /// Retries up to 3 times with exponential backoff and jitter on throttling errors.
 /// </summary>
-public sealed class BedrockModel : StrandsAgents.Core.IModel
+public sealed class BedrockModel : StrandsAgents.Core.IModel, StrandsAgents.Core.IGuardrailEvaluator
 {
     private readonly IAmazonBedrockRuntime _client;
     private readonly string _modelId;
     private readonly ResiliencePipeline _retryPipeline;
+    private readonly BedrockGuardrailConfig? _guardrailConfig;
+    private readonly StrandsAgents.Core.HookRegistry? _hooks;
 
     /// <summary>
     /// Initializes a new <see cref="BedrockModel"/> with the given region and model.
@@ -33,13 +35,19 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
     /// An existing <see cref="IAmazonBedrockRuntime"/> client to use instead of creating one.
     /// Intended for unit testing — pass a mock to avoid live AWS calls.
     /// </param>
+    /// <param name="guardrailConfig">Optional guardrail configuration. When non-null, guardrail evaluation is applied to every model call.</param>
+    /// <param name="hooks">Optional hook registry for firing <see cref="StrandsAgents.Core.GuardrailViolationEvent"/> on violations.</param>
     public BedrockModel(
         string region = "us-east-1",
         string modelId = "us.anthropic.claude-haiku-4-5-20251001-v1:0",
         AmazonBedrockRuntimeConfig? config = null,
-        IAmazonBedrockRuntime? clientOverride = null)
+        IAmazonBedrockRuntime? clientOverride = null,
+        BedrockGuardrailConfig? guardrailConfig = null,
+        StrandsAgents.Core.HookRegistry? hooks = null)
     {
         _modelId = modelId;
+        _guardrailConfig = guardrailConfig;
+        _hooks = hooks;
 
         if (clientOverride is not null)
         {
@@ -57,11 +65,93 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
         _retryPipeline = BuildRetryPipeline();
     }
 
+    // ── IGuardrailEvaluator ───────────────────────────────────────────────────
+
+    /// <inheritdoc/>
+    public bool IsEnabled => _guardrailConfig is not null;
+
+    /// <inheritdoc/>
+    public bool ShadowMode => _guardrailConfig?.ShadowMode ?? false;
+
+    /// <inheritdoc/>
+    public async Task<StrandsAgents.Core.GuardrailEvaluationResult> EvaluateAsync(
+        string content,
+        string source,
+        CancellationToken ct = default)
+    {
+        if (_guardrailConfig is null)
+            return new StrandsAgents.Core.GuardrailEvaluationResult(
+                StrandsAgents.Core.GuardrailAction.None, null, null, null);
+
+        var request = new ApplyGuardrailRequest
+        {
+            GuardrailIdentifier = _guardrailConfig.GuardrailId,
+            GuardrailVersion = _guardrailConfig.GuardrailVersion,
+            Source = source == "INPUT"
+                ? GuardrailContentSource.INPUT
+                : GuardrailContentSource.OUTPUT,
+            Content = [new GuardrailContentBlock
+            {
+                Text = new GuardrailTextBlock { Text = content }
+            }]
+        };
+
+        var response = await _client.ApplyGuardrailAsync(request, ct).ConfigureAwait(false);
+
+        var action = response.Action == GuardrailAction.GUARDRAIL_INTERVENED
+            ? StrandsAgents.Core.GuardrailAction.Intervened
+            : StrandsAgents.Core.GuardrailAction.None;
+
+        // Extract the canned blocked message from outputs if present
+        string? blockedMessage = null;
+        if (response.Outputs?.Count > 0)
+            blockedMessage = response.Outputs[0].Text;
+
+        return new StrandsAgents.Core.GuardrailEvaluationResult(
+            action,
+            blockedMessage,
+            _guardrailConfig.GuardrailId,
+            _guardrailConfig.GuardrailVersion);
+    }
+
+    // ── IModel ────────────────────────────────────────────────────────────────
+
     /// <inheritdoc/>
     public async Task<StrandsAgents.Core.ModelResponse> InvokeAsync(
         StrandsAgents.Core.ModelRequest request,
         CancellationToken ct = default)
     {
+        // Shadow mode: evaluate content without blocking
+        if (_guardrailConfig?.ShadowMode == true)
+        {
+            try
+            {
+                var outboundContent = string.Join(" ", request.Messages
+                    .Where(m => m.Role == StrandsAgents.Core.Role.User)
+                    .SelectMany(m => m.Content.OfType<StrandsAgents.Core.TextBlock>())
+                    .Select(b => b.Text));
+
+                if (!string.IsNullOrEmpty(outboundContent))
+                {
+                    var evalResult = await EvaluateAsync(outboundContent, "INPUT", ct).ConfigureAwait(false);
+                    if (evalResult.Action != StrandsAgents.Core.GuardrailAction.None && _hooks is not null)
+                    {
+                        var violationEvt = new StrandsAgents.Core.GuardrailViolationEvent(
+                            evalResult.GuardrailId ?? string.Empty,
+                            evalResult.GuardrailVersion ?? string.Empty,
+                            evalResult.Action,
+                            StrandsAgents.Core.GuardrailSource.Input,
+                            evalResult.BlockedMessage);
+                        await _hooks.FireAsync(violationEvt, ct).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BedrockModel] Shadow mode evaluation failed: {ex.Message}");
+            }
+        }
+
         var converseRequest = BuildConverseRequest(request);
 
         var response = await _retryPipeline.ExecuteAsync(
@@ -76,6 +166,37 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
         StrandsAgents.Core.ModelRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
+        // Shadow mode: evaluate content without blocking
+        if (_guardrailConfig?.ShadowMode == true)
+        {
+            try
+            {
+                var outboundContent = string.Join(" ", request.Messages
+                    .Where(m => m.Role == StrandsAgents.Core.Role.User)
+                    .SelectMany(m => m.Content.OfType<StrandsAgents.Core.TextBlock>())
+                    .Select(b => b.Text));
+
+                if (!string.IsNullOrEmpty(outboundContent))
+                {
+                    var evalResult = await EvaluateAsync(outboundContent, "INPUT", ct).ConfigureAwait(false);
+                    if (evalResult.Action != StrandsAgents.Core.GuardrailAction.None && _hooks is not null)
+                    {
+                        var violationEvt = new StrandsAgents.Core.GuardrailViolationEvent(
+                            evalResult.GuardrailId ?? string.Empty,
+                            evalResult.GuardrailVersion ?? string.Empty,
+                            evalResult.Action,
+                            StrandsAgents.Core.GuardrailSource.Input,
+                            evalResult.BlockedMessage);
+                        await _hooks.FireAsync(violationEvt, ct).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BedrockModel] Shadow mode evaluation failed: {ex.Message}");
+            }
+        }
+
         var converseRequest = BuildConverseRequest(request);
         var streamRequest = new ConverseStreamRequest
         {
@@ -85,6 +206,20 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
             ToolConfig = converseRequest.ToolConfig,
             InferenceConfig = converseRequest.InferenceConfig
         };
+
+        // Add guardrail stream config if configured
+        if (_guardrailConfig is not null)
+        {
+            streamRequest.GuardrailConfig = new GuardrailStreamConfiguration
+            {
+                GuardrailIdentifier = _guardrailConfig.GuardrailId,
+                GuardrailVersion = _guardrailConfig.GuardrailVersion,
+                Trace = _guardrailConfig.Trace ? GuardrailTrace.Enabled : GuardrailTrace.Disabled,
+                StreamProcessingMode = _guardrailConfig.StreamProcessingMode == GuardrailStreamProcessingMode.Synchronous
+                    ? Amazon.BedrockRuntime.GuardrailStreamProcessingMode.Sync
+                    : Amazon.BedrockRuntime.GuardrailStreamProcessingMode.Async
+            };
+        }
 
         // Retry only covers the initial stream establishment — not mid-stream events.
         var response = await _retryPipeline.ExecuteAsync(
@@ -178,6 +313,8 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
         yield return new StrandsAgents.Core.ModelCompleteEvent(finalResponse);
     }
 
+    // ── Private helpers ───────────────────────────────────────────────────────
+
     /// <summary>
     /// Builds the Polly retry pipeline: up to 3 retries on ThrottlingException,
     /// with exponential backoff (2^attempt seconds) plus random jitter (0–500 ms).
@@ -222,7 +359,7 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
         if (request.Parameters.Temperature.HasValue)
             inferenceConfig.Temperature = request.Parameters.Temperature.Value;
 
-        return new ConverseRequest
+        var converseRequest = new ConverseRequest
         {
             ModelId = request.Parameters.ModelId ?? _modelId,
             Messages = messages,
@@ -230,6 +367,47 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
             ToolConfig = toolConfig,
             InferenceConfig = inferenceConfig
         };
+
+        // Add guardrail config if configured
+        if (_guardrailConfig is not null)
+        {
+            converseRequest.GuardrailConfig = new GuardrailConfiguration
+            {
+                GuardrailIdentifier = _guardrailConfig.GuardrailId,
+                GuardrailVersion = _guardrailConfig.GuardrailVersion,
+                Trace = _guardrailConfig.Trace ? GuardrailTrace.Enabled : GuardrailTrace.Disabled
+            };
+
+            // Wrap only the last user message in guardContent when EvaluateLatestMessageOnly=true
+            if (_guardrailConfig.EvaluateLatestMessageOnly && converseRequest.Messages.Count > 0)
+            {
+                var lastUserMsg = converseRequest.Messages.LastOrDefault(m => m.Role == ConversationRole.User);
+                if (lastUserMsg is not null)
+                {
+                    var newContent = new List<ContentBlock>();
+                    foreach (var block in lastUserMsg.Content)
+                    {
+                        if (block.Text is not null)
+                        {
+                            newContent.Add(new ContentBlock
+                            {
+                                GuardContent = new GuardrailConverseContentBlock
+                                {
+                                    Text = new GuardrailConverseTextBlock { Text = block.Text }
+                                }
+                            });
+                        }
+                        else
+                        {
+                            newContent.Add(block);
+                        }
+                    }
+                    lastUserMsg.Content = newContent;
+                }
+            }
+        }
+
+        return converseRequest;
     }
 
     private static Amazon.BedrockRuntime.Model.Message MapMessage(StrandsAgents.Core.Message msg)
@@ -285,7 +463,7 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
         };
     }
 
-    private static StrandsAgents.Core.ModelResponse MapResponse(ConverseResponse response)
+    private StrandsAgents.Core.ModelResponse MapResponse(ConverseResponse response)
     {
         string? text = null;
         var toolCalls = new List<StrandsAgents.Core.ToolCall>();
@@ -308,7 +486,29 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
             response.Usage?.InputTokens ?? 0,
             response.Usage?.OutputTokens ?? 0);
 
-        return new StrandsAgents.Core.ModelResponse(text, toolCalls, MapStopReason(response.StopReason), usage);
+        var stopReason = MapStopReason(response.StopReason);
+
+        // Handle guardrail intervention
+        if (stopReason == StrandsAgents.Core.StopReason.GuardrailBlocked && _guardrailConfig is not null)
+        {
+            if (_guardrailConfig.RedactOutput)
+            {
+                // Redact mode: suppress the original response entirely.
+                // Use the explicit override message if set, otherwise the hardcoded placeholder.
+                // Never surface the original model output when redaction is enabled.
+                text = _guardrailConfig.RedactOutputMessage ?? "[Output redacted by guardrail]";
+            }
+            else
+            {
+                // Not redacting — surface Bedrock's blocked message from the response if available,
+                // falling back to whatever text the model returned.
+                var bedrockBlockedMessage = response.Output?.Message?.Content
+                    ?.FirstOrDefault(b => b.Text is not null)?.Text;
+                text ??= bedrockBlockedMessage;
+            }
+        }
+
+        return new StrandsAgents.Core.ModelResponse(text, toolCalls, stopReason, usage);
     }
 
     private static StrandsAgents.Core.StopReason MapStopReason(Amazon.BedrockRuntime.StopReason? reason)
@@ -319,6 +519,8 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel
             return StrandsAgents.Core.StopReason.MaxTokens;
         if (reason == Amazon.BedrockRuntime.StopReason.Stop_sequence)
             return StrandsAgents.Core.StopReason.StopSequence;
+        if (reason == Amazon.BedrockRuntime.StopReason.Guardrail_intervened)
+            return StrandsAgents.Core.StopReason.GuardrailBlocked;
         return StrandsAgents.Core.StopReason.EndTurn;
     }
 

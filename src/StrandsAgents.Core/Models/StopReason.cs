@@ -16,5 +16,7 @@ public enum StopReason
     /// <summary>A hook interrupted the loop.</summary>
     Interrupted,
     /// <summary>An unrecoverable error occurred.</summary>
-    Error
+    Error,
+    /// <summary>A guardrail blocked the request or response.</summary>
+    GuardrailBlocked
 }

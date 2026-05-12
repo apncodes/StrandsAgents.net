@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\StrandsAgents.Tools\StrandsAgents.Tools.csproj" />
     <ProjectReference Include="..\..\src\StrandsAgents.MultiAgent\StrandsAgents.MultiAgent.csproj" />
     <ProjectReference Include="..\..\src\StrandsAgents.Extensions.DI\StrandsAgents.Extensions.DI.csproj" />
+    <ProjectReference Include="..\..\src\StrandsAgents.Models.Bedrock\StrandsAgents.Models.Bedrock.csproj" />
   </ItemGroup>
 
 </Project>

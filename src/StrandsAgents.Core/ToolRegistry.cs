@@ -61,6 +61,16 @@ public sealed class ToolRegistry
             return ToolResult.Failure(call.Id, $"Tool '{call.Name}' not found.");
         }
 
+        if (tool.Definition.ParameterConstraints is { Count: > 0 } constraints)
+        {
+            var validationError = ValidateParameters(call.Input, constraints);
+            if (validationError is not null)
+            {
+                toolActivity?.SetTag("tool.success", false);
+                return ToolResult.Failure(call.Id, validationError);
+            }
+        }
+
         try
         {
             var sw = Stopwatch.StartNew();
@@ -81,5 +91,45 @@ public sealed class ToolRegistry
             StrandsTelemetry.ToolCalls.Add(1);
             return ToolResult.Failure(call.Id, ex.Message);
         }
+    }
+
+    private static string? ValidateParameters(
+        System.Text.Json.JsonElement input,
+        IReadOnlyDictionary<string, ToolParameterConstraints> constraints)
+    {
+        foreach (var (paramName, constraint) in constraints)
+        {
+            // Determine whether the parameter is present and non-null
+            System.Text.Json.JsonElement value = default;
+            var hasValue = input.ValueKind == System.Text.Json.JsonValueKind.Object
+                && input.TryGetProperty(paramName, out value)
+                && value.ValueKind != System.Text.Json.JsonValueKind.Null;
+
+            if (constraint.Required && !hasValue)
+                return $"Required parameter '{paramName}' is missing or null.";
+
+            if (!hasValue)
+                continue;
+
+            if (value.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                var strValue = value.GetString()!;
+
+                if (constraint.MinLength.HasValue && strValue.Length < constraint.MinLength.Value)
+                    return $"Parameter '{paramName}' length {strValue.Length} is less than minimum {constraint.MinLength.Value}.";
+
+                if (constraint.MaxLength.HasValue && strValue.Length > constraint.MaxLength.Value)
+                    return $"Parameter '{paramName}' length {strValue.Length} exceeds maximum {constraint.MaxLength.Value}.";
+
+                if (constraint.Pattern is not null
+                    && !System.Text.RegularExpressions.Regex.IsMatch(strValue, constraint.Pattern))
+                    return $"Parameter '{paramName}' does not match required pattern '{constraint.Pattern}'.";
+
+                if (constraint.AllowedValues is { Length: > 0 }
+                    && !constraint.AllowedValues.Contains(strValue, StringComparer.Ordinal))
+                    return $"Parameter '{paramName}' value '{strValue}' is not in the allowed values list.";
+            }
+        }
+        return null;
     }
 }
