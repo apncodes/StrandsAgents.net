@@ -7,7 +7,7 @@ namespace StrandsAgents.Tools;
 /// The source generator emits <c>CalculatorTool_Calculate_Tool</c> — an
 /// <see cref="ITool"/> wrapper with a compile-time JSON schema.
 /// </summary>
-public sealed class CalculatorTool
+public sealed partial class CalculatorTool
 {
     /// <summary>
     /// Performs basic arithmetic on two numbers.

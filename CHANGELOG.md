@@ -4,6 +4,39 @@ All notable changes to Strands Agents .NET are documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`IToolProvider` pattern** — classes with `[Tool]`-decorated methods can now be passed directly to the `Agent` constructor without referencing source-generated wrapper type names. Declare the class `partial` and pass it via `toolProviders:`:
+
+  ```csharp
+  public partial class MyTools
+  {
+      [Tool("Returns weather")]
+      public string GetWeather(string city) => $"Sunny in {city}";
+  }
+
+  var agent = new Agent(model, toolProviders: [new MyTools()]);
+  ```
+
+- **`IToolProvider` interface** (`StrandsAgents.Core`) — single contract implemented automatically by the source generator. Users never write `GetTools()` by hand.
+
+- **`STRAND001` diagnostic** — the source generator emits a `Warning` when a class with `[Tool]` methods is not declared `partial`. The per-method wrapper classes are still emitted so existing code keeps compiling.
+
+- **`Agent` constructor `toolProviders` parameter** — new optional `IEnumerable<IToolProvider>? toolProviders` parameter (positioned after `tools`). Both `tools` and `toolProviders` can be supplied simultaneously; all tools are merged into the same registry. All existing call sites compile unchanged.
+
+- **`AddStrandsToolProvider<TProvider>()` DI extension** (`StrandsAgents.Extensions.DI`) — registers a tool-provider type as a transient `IToolProvider`. Multiple calls accumulate providers, all resolved by `AddStrandsAgent()`.
+
+- **`CalculatorTool` declared `partial`** — enables `toolProviders: [new CalculatorTool()]` in user code and in `samples/CliAgent`.
+
+### Changed
+
+- `samples/CliAgent/Program.cs` updated to use `toolProviders: [new CalculatorTool()]` instead of the explicit wrapper form.
+- README quickstart updated to show the `partial class` + `toolProviders:` pattern as the primary example, with the old wrapper form retained as a backward-compatibility note.
+
+---
+
 ## [0.1.5] — 2025-05-09
 
 ### Fixed

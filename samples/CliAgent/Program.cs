@@ -20,7 +20,7 @@ var model = new BedrockModel(region: "us-east-1", modelId: "us.anthropic.claude-
 var agent = new Agent(
     model,
     systemPrompt: "You are a helpful assistant. Use the calculator tool when arithmetic is needed.",
-    tools: [new CalculatorTool_Calculate_Tool(new CalculatorTool())]);
+    toolProviders: [new CalculatorTool()]);
 
 Console.WriteLine("Strands CLI Agent — type your message, 'exit' to quit");
 Console.WriteLine();

@@ -2,7 +2,7 @@ using StrandsAgents.Core;
 
 namespace ResponsibleAiSample.Tools;
 
-public class ContentFetchTool
+public partial class ContentFetchTool
 {
     private static readonly HttpClient _httpClient = new();
 
