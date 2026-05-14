@@ -6,9 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\StrandsAgents.Core\StrandsAgents.Core.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Models.Bedrock\StrandsAgents.Models.Bedrock.csproj" />
-    <ProjectReference Include="..\..\src\StrandsAgents.Runtime\StrandsAgents.Runtime.csproj" />
+    <PackageReference Include="StrandsAgents.Core" Version="0.1.8" />
+    <PackageReference Include="StrandsAgents.Models.Bedrock" Version="0.1.8" />
+    <PackageReference Include="StrandsAgents.Runtime" Version="0.1.8" />
   </ItemGroup>
 
 </Project>
