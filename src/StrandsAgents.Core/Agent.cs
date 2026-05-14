@@ -19,6 +19,7 @@ public sealed class Agent : IAgent
         IModel model,
         string? systemPrompt = null,
         IEnumerable<ITool>? tools = null,
+        IEnumerable<IToolProvider>? toolProviders = null,
         IConversationManager? conversationManager = null,
         ISessionManager? sessionManager = null,
         HookRegistry? hooks = null,
@@ -33,6 +34,12 @@ public sealed class Agent : IAgent
         var registry = new ToolRegistry();
         if (tools is not null)
             registry.RegisterAll(tools);
+        if (toolProviders is not null)
+            foreach (var provider in toolProviders)
+            {
+                ArgumentNullException.ThrowIfNull(provider, nameof(toolProviders));
+                registry.RegisterAll(provider.GetTools());
+            }
 
         _eventLoop = new EventLoop(model, registry, config ?? new AgentConfig(), hooks, guardrailEvaluator);
     }

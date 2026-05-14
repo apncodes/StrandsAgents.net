@@ -2,7 +2,7 @@ using StrandsAgents.Core;
 
 namespace ResponsibleAiSample.Tools;
 
-public class FileAccessTool
+public partial class FileAccessTool
 {
     // RESPONSIBLE AI PRINCIPLE: Least Privilege
     // This tool only reads files from an explicit allow-list of permitted directories.

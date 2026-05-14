@@ -6,9 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="StrandsAgents.Core" Version="0.1.5" />
-    <PackageReference Include="StrandsAgents.Models.Bedrock" Version="0.1.5" />
-    <PackageReference Include="StrandsAgents.Tools" Version="0.1.5" />
+    <ProjectReference Include="..\..\src\StrandsAgents.Core\StrandsAgents.Core.csproj" />
+    <ProjectReference Include="..\..\src\StrandsAgents.Models.Bedrock\StrandsAgents.Models.Bedrock.csproj" />
+    <ProjectReference Include="..\..\src\StrandsAgents.Tools\StrandsAgents.Tools.csproj" />
+    <ProjectReference Include="..\..\src\StrandsAgents.SourceGenerator\StrandsAgents.SourceGenerator.csproj">
+      <OutputItemType>Analyzer</OutputItemType>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

@@ -37,6 +37,7 @@ public static class StrandsServiceCollectionExtensions
         {
             var model = sp.GetRequiredService<IModel>();
             var tools = sp.GetService<IEnumerable<ITool>>();
+            var toolProviders = sp.GetService<IEnumerable<IToolProvider>>();
             var conversationManager = sp.GetService<IConversationManager>();
             var sessionManager = sp.GetService<ISessionManager>();
             var hooks = sp.GetService<HookRegistry>();
@@ -46,6 +47,7 @@ public static class StrandsServiceCollectionExtensions
                 model,
                 systemPrompt: null,
                 tools: tools,
+                toolProviders: toolProviders,
                 conversationManager: conversationManager,
                 sessionManager: sessionManager,
                 hooks: hooks,
@@ -187,6 +189,26 @@ public static class StrandsServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddTransient<ITool, TTool>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a tool-provider type as an <see cref="IToolProvider"/> in the DI container.
+    /// Multiple calls accumulate providers — all are resolved by <see cref="AddStrandsAgent"/>
+    /// via <c>IEnumerable&lt;IToolProvider&gt;</c>.
+    /// </summary>
+    /// <typeparam name="TProvider">
+    /// The tool-provider type. Must be a <c>partial class</c> decorated with <c>[Tool]</c>
+    /// methods so the source generator can emit the <see cref="IToolProvider"/> implementation.
+    /// </typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    public static IServiceCollection AddStrandsToolProvider<TProvider>(
+        this IServiceCollection services)
+        where TProvider : class, IToolProvider
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddTransient<IToolProvider, TProvider>();
         return services;
     }
 
