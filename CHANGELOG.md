@@ -8,6 +8,16 @@ All notable changes to Strands Agents .NET are documented here.
 
 ---
 
+## [0.1.9] — 2026-05-15
+
+### Changed
+
+- **NuGet package metadata** — all seven packages now have accurate, package-specific descriptions, expanded tags (`mcp`, `a2a`, `source-generator`, `aot`), and correct repository URLs.
+- **README polish** — fixed broken Jump-to anchor (`#why-strandsagentsnet`), retired the `Strands.NET` name variant, standardized comparison table to use `WeatherTools`, added Community section linking to GitHub Discussions.
+- **Per-package READMEs** — fixed stale GitHub URLs; `StrandsAgents.Tools` README updated to use the modern `toolProviders:` pattern.
+
+---
+
 ## [0.1.8] — 2026-05-14
 
 ### Added
