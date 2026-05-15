@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>StrandsAgents.MultiAgent</PackageId>
-    <Description>Multi-agent orchestration for Strands Agents .NET. Graph-based pipelines, agent-as-tool composition, parallel execution, and A2A protocol support for cross-framework agent networks.</Description>
+    <Description>Multi-agent orchestration for Strands Agents .NET — pipeline, parallel fan-out, graph with conditional routing, agent-as-tool, and A2A protocol for cross-process cross-language agent communication.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

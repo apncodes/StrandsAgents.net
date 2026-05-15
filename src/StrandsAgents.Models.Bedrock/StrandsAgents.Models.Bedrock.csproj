@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>StrandsAgents.Models.Bedrock</PackageId>
-    <Description>Amazon Bedrock model provider for Strands Agents .NET. Use Claude, Nova, Llama and other Bedrock models with the Strands agent framework. Includes retry, streaming, and structured output support.</Description>
+    <Description>Amazon Bedrock model provider for Strands Agents .NET — Converse and ConverseStream API, cross-region inference profiles, Guardrails, and all Bedrock-hosted model families including Claude, Nova, and Llama.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

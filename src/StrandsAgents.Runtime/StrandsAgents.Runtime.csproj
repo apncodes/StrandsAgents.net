@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>StrandsAgents.Runtime</PackageId>
-    <Description>Amazon Bedrock AgentCore integration for Strands Agents .NET. Provides a hosting wrapper to deploy any Strands Agents .NET agent to AgentCore Runtime, plus optional managed service tools (Memory, Browser, Code Interpreter). Your agent code is completely unchanged — only the hosting changes. This package is optional — Strands Agents .NET works fully without it.</Description>
+    <Description>Amazon Bedrock AgentCore Runtime hosting for Strands Agents .NET — MapAgentCoreEndpoints(), managed Memory, Code Interpreter, Browser, and Gateway tool integrations. Your agent code is unchanged.</Description>
     <PackageTags>aws;bedrock;agentcore;agents;ai;dotnet;strands;runtime;hosting</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

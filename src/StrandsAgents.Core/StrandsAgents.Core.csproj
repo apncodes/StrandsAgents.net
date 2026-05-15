@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>StrandsAgents.Core</PackageId>
-    <Description>Strands Agents .NET — model-driven agentic AI for C#. Build production-ready agents with tools, hooks, streaming, and human-in-the-loop in just a few lines of C# 13.</Description>
+    <Description>Model-driven agentic AI for C# — agent loop, tool system, hooks, streaming, session management, and model providers for Anthropic, OpenAI-compatible, and Gemini. Zero runtime reflection via Roslyn source generator.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

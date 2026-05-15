@@ -12,11 +12,11 @@
     <Authors>Strands .NET Contributors</Authors>
     <Company>Community</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageTags>ai;agents;llm;strands;dotnet;csharp;roslyn;sourcegenerator</PackageTags>
-    <PackageProjectUrl>https://github.com/apncodes/strands.net</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/apncodes/strands.net</RepositoryUrl>
+    <PackageTags>ai;agents;llm;strands;strandsagents;dotnet;csharp;roslyn;source-generator;aot</PackageTags>
+    <PackageProjectUrl>https://github.com/apncodes/StrandsAgents.net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/apncodes/StrandsAgents.net</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Description>Roslyn source generator for Strands Agents .NET. Emits compile-time ITool wrappers from [Tool]-decorated methods — zero runtime reflection, IDE-navigable, schema-as-string-literal.</Description>
+    <Description>Roslyn source generator for Strands Agents .NET — emits compile-time ITool wrappers and IToolProvider implementations from [Tool]-decorated partial classes. Zero runtime reflection. AOT-safe. IDE-navigable.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IsRoslynComponent>true</IsRoslynComponent>

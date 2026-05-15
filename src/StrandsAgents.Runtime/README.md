@@ -1,6 +1,6 @@
 # StrandsAgents.Runtime
 
-Deploy any [Strands Agents .NET](https://github.com/apncodes/strands.net) agent to [Amazon Bedrock AgentCore Runtime](https://aws.amazon.com/bedrock/agentcore/) with one line. Optionally use AgentCore managed services — Memory, Browser, and Code Interpreter — as tools your agent can invoke.
+Deploy any [Strands Agents .NET](https://github.com/apncodes/StrandsAgents.net) agent to [Amazon Bedrock AgentCore Runtime](https://aws.amazon.com/bedrock/agentcore/) with one line. Optionally use AgentCore managed services — Memory, Browser, and Code Interpreter — as tools your agent can invoke.
 
 ```bash
 dotnet add package StrandsAgents.Runtime

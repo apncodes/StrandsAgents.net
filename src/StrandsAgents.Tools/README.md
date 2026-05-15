@@ -1,6 +1,6 @@
 # StrandsAgents.Tools
 
-Built-in tools for [Strands Agents .NET](https://github.com/apncodes/strands.net) agents.
+Built-in tools for [Strands Agents .NET](https://github.com/apncodes/StrandsAgents.net) agents.
 
 ```bash
 dotnet add package StrandsAgents.Tools
@@ -11,18 +11,20 @@ dotnet add package StrandsAgents.Tools
 | `CalculatorTool` | Safe arithmetic evaluation |
 | `FileReadTool(basePath)` | Sandboxed file reads — rejects path traversal |
 | `FileWriteTool(basePath)` | Sandboxed file writes and appends |
-| `HttpRequestTool` | GET / POST via HttpClient |
+| `HttpRequestTool` | GET / POST via `IHttpClientFactory` |
 | `McpToolProvider` | Connect any MCP server (stdio or SSE) |
 
 ```csharp
 using StrandsAgents.Core;
 using StrandsAgents.Tools;
 
-// Calculator
-var agent = new Agent(model, tools: [new CalculatorTool_Calculate_Tool(new CalculatorTool())]);
+// Calculator via toolProviders: (recommended)
+var agent = new Agent(model, toolProviders: [new CalculatorTool()]);
 
-// MCP
+// MCP — connect a filesystem MCP server
 await using var mcp = await McpToolProvider.CreateForStdioAsync(
     "npx", ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]);
 var agent = new Agent(model, tools: await mcp.GetToolsAsync());
 ```
+
+Full documentation: [github.com/apncodes/StrandsAgents.net](https://github.com/apncodes/StrandsAgents.net)

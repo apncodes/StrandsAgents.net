@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>StrandsAgents.Tools</PackageId>
-    <Description>Built-in tools for Strands Agents .NET agents — HTTP requests, file operations, MCP server integration, and more. Drop-in tools for common agentic tasks.</Description>
+    <Description>Built-in tools for Strands Agents .NET — HTTP request, file read/write, calculator, and MCP (Model Context Protocol) tool provider for connecting any MCP server via stdio or SSE.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

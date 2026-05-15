@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>StrandsAgents.Extensions.DI</PackageId>
-    <Description>Microsoft.Extensions.DependencyInjection integration for Strands Agents .NET. Register agents, models, and tools with AddBedrockModel() and AddStrandsAgent() for use in ASP.NET, Worker Services, Lambda, and any .NET host.</Description>
+    <Description>ASP.NET Core and Worker Service DI extensions for Strands Agents .NET — AddBedrockModel(), AddStrandsAgent(), AddStrandsToolProvider&lt;T&gt;(), session management, and Lambda hosting wiring.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

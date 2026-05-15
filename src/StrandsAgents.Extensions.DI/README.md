@@ -1,6 +1,6 @@
 # StrandsAgents.Extensions.DI
 
-`Microsoft.Extensions.DependencyInjection` integration for [Strands Agents .NET](https://github.com/apncodes/strands.net).
+`Microsoft.Extensions.DependencyInjection` integration for [Strands Agents .NET](https://github.com/apncodes/StrandsAgents.net).
 
 ```bash
 dotnet add package StrandsAgents.Extensions.DI

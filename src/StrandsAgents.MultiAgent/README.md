@@ -1,6 +1,6 @@
 # StrandsAgents.MultiAgent
 
-Multi-agent orchestration for [Strands Agents .NET](https://github.com/apncodes/strands.net).
+Multi-agent orchestration for [Strands Agents .NET](https://github.com/apncodes/StrandsAgents.net).
 
 ```bash
 dotnet add package StrandsAgents.MultiAgent

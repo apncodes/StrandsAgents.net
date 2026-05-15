@@ -1,6 +1,6 @@
 # StrandsAgents.Models.Bedrock
 
-Amazon Bedrock model provider for [Strands Agents .NET](https://github.com/apncodes/strands.net).
+Amazon Bedrock model provider for [Strands Agents .NET](https://github.com/apncodes/StrandsAgents.net).
 
 ```bash
 dotnet add package StrandsAgents.Core
