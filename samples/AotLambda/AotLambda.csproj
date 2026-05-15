@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <!-- NativeAOT settings -->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- StripSymbols requires llvm-objcopy on Linux; disable for local macOS builds -->
+    <StripSymbols>false</StripSymbols>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- IL2026/IL3050 warnings come from generated tool wrapper code and AWS Lambda serializer internals.
+         These are known-safe: the tool parameter types are simple strings, fully statically analyzable.
+         IL2104 comes from AWSSDK.Core which is not fully trim-annotated yet.
+         Suppress to keep the build output clean. -->
+    <NoWarn>$(NoWarn);IL2026;IL3050;IL2104</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- AWS Lambda bootstrap -->
+    <PackageReference Include="Amazon.Lambda.Core" Version="2.5.0" />
+    <PackageReference Include="Amazon.Lambda.RuntimeSupport" Version="1.12.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Strands Agents .NET — project references for local development -->
+    <ProjectReference Include="..\..\src\StrandsAgents.Core\StrandsAgents.Core.csproj" />
+    <ProjectReference Include="..\..\src\StrandsAgents.Models.Bedrock\StrandsAgents.Models.Bedrock.csproj" />
+    <!-- Source generator is compile-time only — no runtime dependency -->
+    <ProjectReference Include="..\..\src\StrandsAgents.SourceGenerator\StrandsAgents.SourceGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

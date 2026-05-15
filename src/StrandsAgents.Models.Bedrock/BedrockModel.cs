@@ -552,12 +552,47 @@ public sealed class BedrockModel : StrandsAgents.Core.IModel, StrandsAgents.Core
         if (doc.IsDictionary())
         {
             var dict = doc.AsDictionary();
-            var jsonDict = new Dictionary<string, object?>();
+            // Build JSON manually to avoid reflection-based JsonSerializer in AOT contexts.
+            var sb = new System.Text.StringBuilder("{");
+            bool first = true;
             foreach (var kvp in dict)
-                jsonDict[kvp.Key] = DocumentToObject(kvp.Value);
-            return JsonSerializer.Serialize(jsonDict);
+            {
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append('"');
+                sb.Append(kvp.Key.Replace("\"", "\\\""));
+                sb.Append("\":");
+                sb.Append(DocumentToJsonValue(kvp.Value));
+            }
+            sb.Append('}');
+            return sb.ToString();
         }
         return "{}";
+    }
+
+    private static string DocumentToJsonValue(Document doc)
+    {
+        if (doc.IsNull()) return "null";
+        if (doc.IsBool()) return doc.AsBool() ? "true" : "false";
+        if (doc.IsInt()) return doc.AsInt().ToString();
+        if (doc.IsLong()) return doc.AsLong().ToString();
+        if (doc.IsDouble()) return doc.AsDouble().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (doc.IsString()) return "\"" + doc.AsString().Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r") + "\"";
+        if (doc.IsList())
+        {
+            var sb = new System.Text.StringBuilder("[");
+            bool first = true;
+            foreach (var item in doc.AsList())
+            {
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append(DocumentToJsonValue(item));
+            }
+            sb.Append(']');
+            return sb.ToString();
+        }
+        if (doc.IsDictionary()) return DocumentToJson(doc);
+        return "null";
     }
 
     private static object? DocumentToObject(Document doc)

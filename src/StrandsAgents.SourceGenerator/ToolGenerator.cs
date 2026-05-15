@@ -237,8 +237,19 @@ public sealed class ToolGenerator : IIncrementalGenerator
         var schemaJson = $"{{\\\"type\\\": \\\"object\\\", \\\"properties\\\": {{{schemaProps}}}{requiredJson}}}";
 
         // Build parameter deserialization (CancellationToken excluded — passed as ct directly)
+        // Use AOT-safe JsonElement accessors instead of Deserialize<T>() which requires reflection.
         var paramDeserialize = string.Join("\n            ", m.Parameters.Select(p =>
-            $"var {p.Name} = input.GetProperty(\"{p.Name}\").Deserialize<{p.CSharpType}>();"));
+        {
+            var accessor = p.JsonType switch
+            {
+                "string" => $"input.GetProperty(\"{p.Name}\").GetString() ?? string.Empty",
+                "integer" => $"input.GetProperty(\"{p.Name}\").GetInt32()",
+                "number" => $"input.GetProperty(\"{p.Name}\").GetDouble()",
+                "boolean" => $"input.GetProperty(\"{p.Name}\").GetBoolean()",
+                _ => $"input.GetProperty(\"{p.Name}\").GetString() ?? string.Empty"
+            };
+            return $"var {p.Name} = {accessor};";
+        }));
 
         // Append ct as the last argument when the target method accepts CancellationToken
         var paramArgs = string.Join(", ", m.Parameters.Select(p => p.Name));

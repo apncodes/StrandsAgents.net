@@ -337,7 +337,7 @@ builder.Services
 
 **Evolving** — multi-agent orchestration API may see refinements before v1.0.
 
-**Coming next** — Ollama model provider, additional built-in tools, NativeAOT Lambda sample with cold-start benchmarks, expanded multi-agent patterns.
+**Coming next** — Ollama model provider, additional built-in tools, expanded multi-agent patterns, Step Functions durability sample.
 
 ---
 
@@ -379,6 +379,7 @@ builder.Services
 | [SemanticMemorySample](samples/SemanticMemorySample) | `SemanticMemoryTool` — vector / semantic search over AgentCore Memory |
 | [AgentCoreSample](samples/AgentCoreSample) | Deploy any agent to AgentCore Runtime — `MapAgentCoreEndpoints()` in one line |
 | [AgentCoreGatewaySample](samples/AgentCoreGatewaySample) | Travel booking assistant using gateway-hosted tools via `AddAgentCoreGatewayTools()` |
+| [AotLambda](samples/AotLambda) | NativeAOT Lambda — sub-100ms cold start, zero runtime reflection, `provided.al2023` runtime |
 
 ---
 

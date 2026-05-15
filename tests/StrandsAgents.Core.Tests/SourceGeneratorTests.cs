@@ -160,4 +160,89 @@ public class SourceGeneratorTests
 
         Assert.Empty(generated);
     }
+
+    [Fact]
+    public void Generator_StringParameter_EmitsGetStringAccessor()
+    {
+        // Verifies AOT-safe deserialization: GetString() instead of Deserialize<string>()
+        var source = """
+            using StrandsAgents.Core;
+            namespace MyApp;
+            public class WeatherTools
+            {
+                [Tool("Gets weather")]
+                public string GetWeather(string city) => city;
+            }
+            """;
+
+        var (_, diagnostics, generated) = RunGenerator(source);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GetString()", generated);
+        Assert.DoesNotContain("Deserialize<", generated);
+    }
+
+    [Fact]
+    public void Generator_DoubleParameter_EmitsGetDoubleAccessor()
+    {
+        // Verifies AOT-safe deserialization: GetDouble() instead of Deserialize<double>()
+        var source = """
+            using StrandsAgents.Core;
+            namespace MyApp;
+            public class MathTools
+            {
+                [Tool("Adds numbers")]
+                public double Add(double a, double b) => a + b;
+            }
+            """;
+
+        var (_, diagnostics, generated) = RunGenerator(source);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GetDouble()", generated);
+        Assert.DoesNotContain("Deserialize<", generated);
+    }
+
+    [Fact]
+    public void Generator_IntParameter_EmitsGetInt32Accessor()
+    {
+        // Verifies AOT-safe deserialization: GetInt32() instead of Deserialize<int>()
+        var source = """
+            using StrandsAgents.Core;
+            namespace MyApp;
+            public class ForecastTools
+            {
+                [Tool("Gets forecast")]
+                public string GetForecast(string city, int days) => $"{days}-day forecast for {city}";
+            }
+            """;
+
+        var (_, diagnostics, generated) = RunGenerator(source);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GetInt32()", generated);
+        Assert.Contains("GetString()", generated);
+        Assert.DoesNotContain("Deserialize<", generated);
+    }
+
+    [Fact]
+    public void Generator_BoolParameter_EmitsGetBooleanAccessor()
+    {
+        // Verifies AOT-safe deserialization: GetBoolean() instead of Deserialize<bool>()
+        var source = """
+            using StrandsAgents.Core;
+            namespace MyApp;
+            public class BoolTools
+            {
+                [Tool("Toggles a flag")]
+                public bool Toggle(bool value) => !value;
+            }
+            """;
+
+        var (_, diagnostics, generated) = RunGenerator(source);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GetBoolean()", generated);
+        Assert.DoesNotContain("Deserialize<", generated);
+    }
 }
