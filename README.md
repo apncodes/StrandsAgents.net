@@ -4,7 +4,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/StrandsAgents.Core?label=NuGet&color=blue)](https://www.nuget.org/packages/StrandsAgents.Core) [![CI](https://github.com/apncodes/StrandsAgents.net/actions/workflows/ci.yml/badge.svg)](https://github.com/apncodes/StrandsAgents.net/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/apncodes/StrandsAgents.net/blob/main/LICENSE)
 
-**Jump to:** [Quickstart](#quickstart) · [Why StrandsAgents.NET](#why-strandagentsnet) · [Production essentials](#production-essentials) · [AWS-native deployment](#aws-native-deployment) · [Multi-agent](#multi-agent-patterns) · [Samples](#samples)
+**Jump to:** [Quickstart](#quickstart) · [Why StrandsAgents.NET](#why-strandsagentsnet) · [Production essentials](#production-essentials) · [AWS-native deployment](#aws-native-deployment) · [Multi-agent](#multi-agent-patterns) · [Samples](#samples)
 
 ## At a glance
 
@@ -108,7 +108,7 @@ Console.WriteLine(result.Message);
 | Streaming | `IAsyncEnumerable<T>` |
 | Hook registration | `Register<TEvent>` — compiler-checked |
 | Tool schema | Roslyn source generator at compile time |
-| Tool registration | `toolProviders: [new MyTools()]` — no generated type names |
+| Tool registration | `toolProviders: [new WeatherTools()]` — no generated type names |
 | Parallel execution | `Task.WhenAll` |
 | DI integration | `AddBedrockModel()` + `AddStrandsAgent()` + `AddStrandsToolProvider<T>()` |
 | Enterprise hosting | `IHostedService` / AWS Lambda / any host |
@@ -228,7 +228,7 @@ var writerAgent  = new Agent(model, tools: [researchTool]);
 
 ### AgentCore Runtime
 
-Deploy any Strands.NET agent to Amazon Bedrock AgentCore Runtime with one line. Your agent code is unchanged.
+Deploy any Strands Agents .NET agent to Amazon Bedrock AgentCore Runtime with one line. Your agent code is unchanged.
 
 ```bash
 dotnet add package StrandsAgents.Runtime
@@ -386,7 +386,7 @@ builder.Services
 
 Strands Agents is an open source SDK that takes a model-driven approach to building AI agents — the model drives its own behavior, decides which tools to call, and loops until the task is complete. This approach emerged from real-world production experience building agents at AWS.
 
-Strands Agents .NET is a ground-up implementation of those design principles for the .NET ecosystem. It is not a port or wrapper — StrandsAgents.NET is built natively in C# 13, using the patterns and idioms .NET developers already know. The core concepts (event loop, tool system, hooks, multi-agent orchestration) follow the Strands design, and the A2A protocol implementation is interoperable across languages and frameworks.
+Strands Agents .NET is a ground-up implementation of those design principles for the .NET ecosystem. It is not a port or wrapper — Strands Agents .NET is built natively in C# 13, using the patterns and idioms .NET developers already know. The core concepts (event loop, tool system, hooks, multi-agent orchestration) follow the Strands design, and the A2A protocol implementation is interoperable across languages and frameworks.
 
 Learn more about the Strands Agents design principles at [strandsagents.com](https://strandsagents.com).
 
@@ -397,6 +397,12 @@ This project is not affiliated with or endorsed by AWS.
 ## Contributing
 
 PRs, issues, and feedback are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The biggest areas of need are additional model providers (Ollama), more built-in tools, and real-world samples.
+
+---
+
+## Community
+
+Questions and ideas welcome in [GitHub Discussions](https://github.com/apncodes/StrandsAgents.net/discussions).
 
 ---
 
