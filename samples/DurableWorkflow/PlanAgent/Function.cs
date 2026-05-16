@@ -75,7 +75,7 @@ var handler = async (WorkflowInput input, ILambdaContext context) =>
 
     var json = ExtractJson(result.Message);
     context.Logger.LogInformation(
-        $"[Stage 1/3 — PlanAgent] Extracted JSON ({json.Length} chars): {json[..Math.Min(200, json.Length)]}");
+        $"[Stage 1/3 — PlanAgent] Extracted JSON ({json.Length} chars): {json[..Math.Min(500, json.Length)]}");
     context.Logger.LogInformation(
         $"[Stage 1/3 — PlanAgent] Plan produced. Passing to Stage 2 (ExecuteAgent) via Step Functions.");
 
