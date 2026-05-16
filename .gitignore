@@ -48,6 +48,10 @@ generated/
 .env
 .env.*
 *.pfx
+
+# Lambda build artifacts
+samples/**/bootstrap
+samples/**/*.zip
 *.p12
 appsettings.local.json
 appsettings.Development.json
