@@ -128,6 +128,7 @@ namespace PlanAgent
     // Input to Stage 1
     public class WorkflowInput
     {
+        [JsonPropertyName("topic")]
         public string Topic { get; set; } = "";
     }
 
