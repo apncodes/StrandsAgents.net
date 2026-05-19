@@ -99,13 +99,16 @@ The SDK suppresses known-safe warnings in the `AotLambda` sample's `.csproj`:
 
 ### My Lambda crashes with exit status 131 or 150
 
-This means the binary was built on macOS and deployed to `provided.al2023`. NativeAOT binaries must be built on Linux. Use Docker or an EC2 instance:
+This means the binary was built on macOS and deployed to `provided.al2023`. NativeAOT binaries must be built on Linux. Use Docker:
 
 ```bash
 docker run --rm -v $(pwd):/src -w /src \
   mcr.microsoft.com/dotnet/sdk:10.0 \
-  dotnet publish -c Release -r linux-x64 --output /src/publish
+  bash -c "apt-get update -qq && apt-get install -y -qq clang zlib1g-dev && \
+  dotnet publish -c Release -r linux-arm64 --output /src/publish -p:StripSymbols=true"
 ```
+
+Use `linux-arm64` for Graviton2 (recommended) or `linux-x64` for x86_64.
 
 ### My Lambda returns `{}` instead of the expected JSON
 
