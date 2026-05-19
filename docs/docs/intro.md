@@ -54,7 +54,7 @@ The `[Tool]` attribute and `partial class` tell the Roslyn source generator — 
 - **Easy to learn, idiomatic to write** — any .NET developer can pick this up and ship a working agent in an afternoon. If you can write a C# method, you can write a tool. The advanced .NET features are present where they help and hidden where they don't.
 - **Industry-standard vocabulary** — agent, tool, system prompt, session, hook. Reads natively to anyone coming from Strands Python, OpenAI, Anthropic, or LangChain. No proprietary terminology to translate.
 - **Zero runtime reflection** — compile-time tool dispatch via Roslyn source generators. The `STRAND001` diagnostic catches tool misconfiguration at build time, not at first invocation.
-- **NativeAOT-ready** — designed for AOT-published deployment. Measured **95.3ms average** cold-start init on Graviton2 Lambda (arm64, 512 MB, 20 cold starts — 17/20 under 100ms). See the [AotLambda sample](https://github.com/apncodes/StrandsAgents.net/tree/main/samples/AotLambda).
+- **NativeAOT-ready** — designed for AOT-published deployment. Measured **89.6ms average** cold-start init on Graviton2 Lambda (arm64, 1024 MB, 20 cold starts — 19/20 under 100ms). See the [AotLambda sample](https://github.com/apncodes/StrandsAgents.net/tree/main/samples/AotLambda).
 - **Cloud-neutral core, deep integrations available** — four model providers (Bedrock, Anthropic, OpenAI-compatible, Gemini), open protocols (MCP, A2A), first-class AWS Bedrock and AgentCore support. Runs anywhere .NET runs.
 - **Multi-agent in one package** — pipeline, parallel, graph orchestration, agent-as-tool, A2A protocol for cross-language interop.
 

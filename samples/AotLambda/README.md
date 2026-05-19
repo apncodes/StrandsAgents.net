@@ -2,13 +2,13 @@
 
 This sample publishes a Strands Agents .NET agent as a **NativeAOT** AWS Lambda function using the `provided.al2023` custom runtime. The result is a self-contained native binary with no .NET runtime dependency.
 
-**Recommended: use `arm64` (Graviton2).** Measured **95.3ms average** cold-start init duration at 512 MB (20 cold starts) — 20% faster than x86_64, 17/20 runs under 100ms, smaller binary, and ~20% cheaper per GB-second.
+**Recommended: use `arm64` (Graviton2).** At 512 MB: **95.3ms average** cold-start (17/20 under 100ms). At 1024 MB: **89.6ms average** (19/20 under 100ms). Both are 20%+ faster than x86_64 and ~20% cheaper per GB-second.
 
 ## Why AOT?
 
 Standard .NET Lambda functions use the JIT runtime. On first invocation (cold start), the runtime must load, JIT-compile the code, and initialize the agent. This typically takes 200–500ms.
 
-NativeAOT compiles everything to native machine code at build time. There is no JIT warm-up. Cold-start init duration averages 95.3ms on Graviton2 (17/20 runs under 100ms) — compared to 200–500ms for the equivalent JIT runtime.
+NativeAOT compiles everything to native machine code at build time. There is no JIT warm-up. Cold-start init duration averages 89.6ms on Graviton2 at 1024 MB (19/20 runs under 100ms) — compared to 200–500ms for the equivalent JIT runtime.
 
 The Strands Agents .NET tool system is designed for this: the `[Tool]` attribute triggers a Roslyn source generator that emits compile-time `ITool` wrappers. Zero runtime reflection means zero trimming surprises.
 
@@ -146,11 +146,11 @@ aws lambda invoke \
 | Cold-start method | `update-function-configuration` between each invocation (forces new execution environment) |
 | Workload | Single tool-using agent: user asks for weather → model calls `GetWeather` tool → model synthesizes response |
 | LLM calls per invocation | 2 (one to decide tool call, one to synthesize result with tool output) |
-| Runs | 20 cold starts per architecture |
+| Runs | 20 cold starts per configuration |
 
-### Results — arm64 (Graviton2, 512 MB)
+### Results — arm64 Graviton2, 512 MB
 
-| Run | Init Duration (ms) | Run | Init Duration (ms) |
+| Run | Init (ms) | Run | Init (ms) |
 |---|---|---|---|
 | 1 | 108.69 | 11 | 95.85 |
 | 2 | 107.45 | 12 | 83.47 |
@@ -163,16 +163,38 @@ aws lambda invoke \
 | 9 | 98.78 | 19 | 81.99 |
 | 10 | 99.12 | 20 | 97.00 |
 
-| Metric | Init Duration (ms) |
+| Metric | ms |
 |---|---|
-| **Average** | **95.3** |
-| **Min** | **77.0** |
+| Average | **95.3** |
+| Min | 77.0 |
 | Max | 108.7 |
-| **Runs under 100ms** | **17 / 20** |
+| Under 100ms | **17 / 20** |
 
-### Results — x86_64 (1024 MB)
+### Results — arm64 Graviton2, 1024 MB
 
-| Run | Init Duration (ms) | Run | Init Duration (ms) |
+| Run | Init (ms) | Run | Init (ms) |
+|---|---|---|---|
+| 1 | 95.47 | 11 | 77.71 |
+| 2 | 89.76 | 12 | 83.17 |
+| 3 | 83.46 | 13 | 97.71 |
+| 4 | 84.51 | 14 | 82.68 |
+| 5 | 101.55 | 15 | 94.08 |
+| 6 | 96.72 | 16 | 97.33 |
+| 7 | 90.92 | 17 | 79.37 |
+| 8 | 80.86 | 18 | 99.94 |
+| 9 | 97.58 | 19 | 82.14 |
+| 10 | 96.86 | 20 | 81.00 |
+
+| Metric | ms |
+|---|---|
+| Average | **89.6** |
+| Min | 77.7 |
+| Max | 101.6 |
+| Under 100ms | **19 / 20** |
+
+### Results — x86_64, 1024 MB
+
+| Run | Init (ms) | Run | Init (ms) |
 |---|---|---|---|
 | 1 | 113.09 | 11 | 112.01 |
 | 2 | 107.96 | 12 | 165.20 |
@@ -185,25 +207,22 @@ aws lambda invoke \
 | 9 | 128.41 | 19 | 114.56 |
 | 10 | 108.65 | 20 | 146.41 |
 
-| Metric | Init Duration (ms) |
+| Metric | ms |
 |---|---|
 | Average | 119.8 |
 | Min | 101.5 |
 | Max | 165.2 |
-| Runs under 100ms | 0 / 20 |
+| Under 100ms | 0 / 20 |
 
-### Architecture comparison
+### Three-way comparison
 
-| | arm64 (Graviton2, 512 MB) | x86_64 (1024 MB) |
-|---|---|---|
-| **Avg init duration** | **95.3 ms** | 119.8 ms |
-| **Min init duration** | **77.0 ms** | 101.5 ms |
-| Max init duration | 108.7 ms | 165.2 ms |
-| Runs under 100ms | **17 / 20** | 0 / 20 |
-| Binary size (uncompressed) | **14 MB** | 25 MB |
-| Zip size | **5.4 MB** | ~14 MB |
-| Memory used | 51–55 MB | 52 MB |
-| Price per GB-second | ~20% cheaper | baseline |
+| Configuration | Avg init | Min | Max | Under 100ms | Binary size | Price/GB-s |
+|---|---|---|---|---|---|---|
+| **arm64 Graviton2, 1024 MB** | **89.6 ms** | 77.7 ms | 101.6 ms | **19/20** | 14 MB | ~20% cheaper |
+| arm64 Graviton2, 512 MB | 95.3 ms | 77.0 ms | 108.7 ms | 17/20 | 14 MB | ~20% cheaper |
+| x86_64, 1024 MB | 119.8 ms | 101.5 ms | 165.2 ms | 0/20 | 25 MB | baseline |
+
+**Verdict:** arm64 1024 MB is 5.6ms (6%) faster than arm64 512 MB — a real but modest improvement. If cold-start latency is critical, 1024 MB is worth it. For cost-sensitive workloads, 512 MB delivers nearly the same result at half the memory cost. Either arm64 configuration is ~25% faster than x86_64 at 1024 MB.
 
 ### What the numbers mean
 
