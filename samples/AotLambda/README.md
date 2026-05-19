@@ -1,12 +1,12 @@
 # AotLambda — NativeAOT Strands Agent on AWS Lambda
 
-This sample publishes a Strands Agents .NET agent as a **NativeAOT** AWS Lambda function using the `provided.al2023` custom runtime. The result is a self-contained native binary with no .NET runtime dependency and sub-100ms cold-start init duration.
+This sample publishes a Strands Agents .NET agent as a **NativeAOT** AWS Lambda function using the `provided.al2023` custom runtime. The result is a self-contained native binary with no .NET runtime dependency and ~118ms average cold-start init duration (512 MB, 5 measured cold starts).
 
 ## Why AOT?
 
 Standard .NET Lambda functions use the JIT runtime. On first invocation (cold start), the runtime must load, JIT-compile the code, and initialize the agent. This typically takes 200–500ms.
 
-NativeAOT compiles everything to native machine code at build time. There is no JIT warm-up. Cold-start init duration drops to under 100ms — often under 50ms for simple agents.
+NativeAOT compiles everything to native machine code at build time. There is no JIT warm-up. Cold-start init duration drops to ~118ms average (measured at 512 MB memory) — compared to 200–500ms for the equivalent JIT runtime.
 
 The Strands Agents .NET tool system is designed for this: the `[Tool]` attribute triggers a Roslyn source generator that emits compile-time `ITool` wrappers. Zero runtime reflection means zero trimming surprises.
 

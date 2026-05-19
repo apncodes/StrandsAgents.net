@@ -75,9 +75,22 @@ var agent = new Agent(
     conversationManager: new SummarizingConversationManager(model, maxMessages: 30));
 ```
 
-## Trade-offs
+## Durability
 
-**In-memory sessions** are fast but lost on process restart. Use them for stateless Lambda functions where each invocation is independent.
+Sessions solve **agent durability** — the ability to resume a conversation after a process restart, a Lambda cold start, or a deployment. This is different from workflow durability (guaranteed step execution with checkpointing), which is a platform concern.
+
+The distinction matters:
+
+| Concern | What it means | How Strands.NET addresses it |
+|---|---|---|
+| **Agent durability** | Resume conversation history across process boundaries | `FileSessionManager`, `AgentCoreSessionManager`, or any custom `ISessionManager` |
+| **Workflow durability** | Guaranteed step execution, retry on failure, durable timers | Compose with platform primitives: AWS Step Functions, Azure Durable Functions, or Hangfire |
+
+For most agent use cases — multi-turn assistants, persistent agents, Lambda-hosted agents — session management is all you need. The agent picks up exactly where it left off because the conversation history is reloaded from storage on each invocation.
+
+For long-running workflows where individual steps must be retried independently (e.g., a multi-day research pipeline), the right pattern is to use a durable workflow platform to orchestrate invocations of short-lived agents, each of which uses session management to maintain its own conversation state.
+
+
 
 **File sessions** persist across restarts but don't work in distributed environments (multiple Lambda instances can't share a local file).
 
